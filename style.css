@@ -1,0 +1,249 @@
+/* Import fonts */
+@import url('https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400,1,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400;1,700&display=swap');
+
+/* Variables */
+:root {
+    --primary-color: rgb(0, 82, 96);
+    --primary-background-color: rgb(242, 246, 247);
+    --font-color: rgb(0, 0, 0);
+    --font-color-inverted: rgb(255, 255, 255);
+    --link-color: rgb(0, 82, 96);
+    --link-color-hover: rgb(0, 0, 0);
+    --spacing: 1rem;
+    --spacing-small: 0.5rem;
+    --font-size-root: 1rem;
+    --font-size-small: 0.9rem;
+}
+
+/* Body style */
+body {
+    font-family: 'Nunito Sans', Arial, sans-serif;
+    margin: 20px;
+    line-height: 1.6;
+    background-color: var(--primary-background-color);
+    color: var(--font-color);
+    padding-top: 70px; /* Ensure enough space for the header */
+    padding-left: 10px; /* Adjust padding for logo alignment */
+}
+
+/* Input and textarea */
+input, textarea {
+    font-family: inherit;
+    font-size: var(--font-size-root);
+    width: 100%;
+    padding: var(--spacing-small);
+    margin-top: var(--spacing-small);
+    margin-bottom: var(--spacing-small);
+    border: 2px solid var(--primary-color);
+    border-radius: 0.4rem;
+    background-color: var(--primary-background-color);
+}
+
+input[type="text"] {
+    font-family: inherit;
+    font-size: var(--font-size-root);
+    width: 100%;
+    padding: var(--spacing-small);
+    margin-bottom: var(--spacing);
+    border: 2px solid var(--primary-color);
+    border-radius: 0.4rem;
+    background-color: var(--primary-background-color);
+}
+
+input[type="date"] {
+    margin-bottom: 1rem; /* Add spacing below date picker */
+}
+
+input:hover, textarea:hover {
+    background-color: var(--primary-color-10);
+}
+
+input:focus-visible, textarea:focus-visible {
+    outline: 4px solid var(--primary-color);
+    outline-offset: -4px;
+}
+
+/* Button style */
+button {
+    font-family: inherit;
+    font-size: var(--font-size-root);
+    padding: var(--spacing-small) var(--spacing);
+    cursor: pointer;
+    background-color: var(--primary-color);
+    color: var(--font-color-inverted);
+    border: none;
+    border-radius: 0.4rem;
+    transition: background-color 0.3s ease;
+    display: block;
+    margin-top: var(--spacing);
+}
+
+button:hover {
+    background-color: var(--primary-color-80);
+}
+
+button:disabled {
+    background-color: var(--primary-background-color);
+    color: grey;
+    cursor: not-allowed;
+}
+
+/* Status message */
+#status {
+    margin-top: var(--spacing-small);
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+/* Links */
+a {
+    color: var(--link-color);
+    text-decoration: underline;
+}
+
+a:hover {
+    color: var(--link-color-hover);
+}
+
+/* Event list */
+#eventList {
+    text-align: left; /* Venstrejuster innholdet */
+    margin-top: var(--spacing); /* Legg til litt avstand over */
+}
+
+#eventList div {
+    display: flex;
+    align-items: center;
+    margin-bottom: var(--spacing-small);
+}
+
+#eventList input[type="radio"] {
+    margin-right: var(--spacing-small); /* Avstand mellom radioknapp og tekst */
+}
+
+/* Meeting details */
+#meetingDetails {
+    font-family: 'Nunito Sans', Arial, sans-serif;
+    background-color: var(--primary-background-color);
+    border: 1px solid var(--primary-color);
+    border-radius: 0.5rem;
+    padding: var(--spacing);
+    margin-bottom: var(--spacing);
+}
+
+#meetingDetails h2 {
+    font-size: 1.2rem;
+    margin-bottom: var(--spacing-small);
+    color: var(--primary-color);
+}
+
+#meetingDetails p {
+    margin: var(--spacing-small) 0;
+    font-size: var(--font-size-root);
+    color: var(--font-color);
+}
+
+#meetingDetails strong {
+    color: var(--primary-color);
+}
+
+/* Logout button */
+#logoutButton {
+    font-size: 1rem;
+    color: #035b68;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: right;
+}
+
+/* Header styles */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    background: #e9f7fb;
+    padding: 32px 16px 32px 16px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    min-width: 300px;
+}
+
+.fk-logo {
+    width: 150px;
+    height: 60px;
+    margin-right: 20px;
+}
+
+.fk-title {
+    font-size: 2.2rem;
+    font-weight: bold;
+    color: #111;
+}
+
+.fk-subtitle {
+    letter-spacing: 1px;
+    font-size: 0.95rem;
+    color: #222;
+    font-weight: 400;
+    margin-top: 2px;
+}
+
+.header-center {
+    display: flex;
+    align-items: center;
+    flex: 1 0 0;
+    justify-content: center;
+}
+
+.dust-logo {
+    width: 45px;
+    height: 45px;
+    margin-right: 14px;
+}
+
+.dust-title {
+    font-size: 2.1rem;
+    font-weight: bold;
+    color: #111;
+    letter-spacing: 2px;
+}
+
+.header-right {
+    display: flex;
+    flex-direction: column; /* Stack items vertically */
+    align-items: flex-end; /* Align items to the right */
+    min-width: 170px;
+    margin-top: 10px;
+}
+
+.user-info {
+    display: flex;
+    flex-direction: column; /* Stack name and button vertically */
+    align-items: flex-end; /* Align to the right */
+}
+
+.user-name {
+    font-size: 1rem;
+    color: #035b68;
+    margin-bottom: 0.5rem; /* Add spacing below the name */
+}
+
+/* Responsivitet */
+@media (max-width: 900px) {
+    .header {
+        flex-direction: column;
+        align-items: center;
+    }
+    .header-left,
+    .header-center,
+    .header-right {
+        margin-bottom: 10px;
+    }
+}
