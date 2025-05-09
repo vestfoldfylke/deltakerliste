@@ -1,0 +1,9 @@
+MSAL_CLIENT_ID=<erstatt med clientID fra M365>
+MSAL_AUTHORITY=https://login.microsoftonline.com/<erstatt med tenant ID>
+MSAL_REDIRECT_URI=http://<legg inn redirect uri>
+
+GRAPH_ME_ENDPOINT=https://graph.microsoft.com/v1.0/me
+GRAPH_EVENTS_ENDPOINT=https://graph.microsoft.com/v1.0/me/events
+
+UPLOAD_ENDPOINT=http://localhost:3000/upload
+SEND_EMAIL_ENDPOINT=http://localhost:3000/send-email
