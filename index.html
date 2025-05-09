@@ -6,11 +6,10 @@
     <title>Lag deltakerliste</title>
     <link rel="stylesheet" href="style.css"> <!-- Inkluder CSS-filen -->
     <link rel="icon" href="icon.ico" type="image/x-icon"> <!-- Legg til ikon -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ical.js/1.4.0/ical.min.js"></script> <!-- Legg til ICAL.js -->
-    <script src="https://alcdn.msauth.net/browser/2.32.0/js/msal-browser.min.js"></script> <!-- MSAL.js -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script> <!-- jsPDF -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script> <!-- jsPDF AutoTable -->
+    <script src="xlsx.full.min.js"></script> <!-- XLSX.js er et JavaScript-bibliotek som lar deg lese og skrive Excel-filer i nettleseren. -->
+    <script src="https://alcdn.msauth.net/browser/2.32.0/js/msal-browser.min.js"></script> <!-- Microsoft Authentication Library (MSAL) for JavaScript. It is used to handle authentication and authorization in web applications that integrate with Microsoft services, such as Azure Active Directory (Azure AD) or Microsoft Graph API.-->
+    <script src="jspdf.umd.min.js"></script> <!-- Allows you to create PDF files programmatically. -->
+    <script src="jspdf.plugin.autotable.min.js"></script> <!-- Allows you to create and format tables in PDFs. -->
     <style>
         #username {
             position: absolute;
@@ -59,7 +58,6 @@
         <p><strong>Arrangør:</strong> <span id="meetingOrganizer">Ikke spesifisert</span></p>
     </div>
     <button id="exportTableButton" style="display: none;">Eksporter tabell til Excel</button> <!-- Ny knapp -->
-    <button id="sendEmailButton" style="display: none;">Send som e-post</button> <!-- Knapp lagt til -->
     <button id="printParticipantListButton" style="display: none;">Skriv ut deltakerliste</button> <!-- Ny knapp -->
     <button id="updateStatusButton" style="display: none;">Oppdater status</button> <!-- Ny knapp -->
     <div id="previewTable" style="display: none; margin-top: 1rem;"></div> <!-- Forhåndsvisningstabell -->
@@ -71,9 +69,9 @@
     <script>
         const msalConfig = {
             auth: {
-                clientId: '<clientid>',
-                authority: 'https://login.microsoftonline.com/<tenantid>', // Replace <your-tenant-id> with your Azure AD tenant ID or domain name
-                redirectUri: 'http://<redirecturi>' // Sørg for at dette samsvarer med Azure AD-konfigurasjonen
+                clientId: ' d9334c65-d5ca-47eb-b2e3-4ffa9c0b3c50', // Replace <your-client-id> with your Azure AD app client ID
+                authority: 'https://login.microsoftonline.com/5af31661-4b83-4681-886c-caf3f962b821', // Replace <your-tenant-id> with your Azure AD tenant ID or domain name
+                redirectUri: 'http://localhost:5500' // Sørg for at dette samsvarer med Azure AD-konfigurasjonen
             }
         };
 
@@ -332,23 +330,6 @@
                 console.log('Status oppdatert!');
             } catch (error) {
                 console.log(`Feil ved oppdatering av status: ${error.message}`);
-            }
-        });
-
-        document.getElementById('sendEmailButton').addEventListener('click', async () => {
-            try {
-                console.log('Starter e-postsending...');
-                const response = await fetch(sendEmailEndpoint, { method: 'POST' });
-                const result = await response.json();
-                console.log('Respons fra backend:', result);
-                if (response.ok) {
-                    const mailtoLink = `mailto:?subject=${encodeURIComponent(result.subject)}&body=${encodeURIComponent(result.body)}`;
-                    window.location.href = mailtoLink;
-                } else {
-                    throw new Error(result.message);
-                }
-            } catch (error) {
-                console.error('Feil ved oppretting av e-post:', error);
             }
         });
 
@@ -648,3 +629,4 @@
     </script>
 </body>
 </html>
+`
