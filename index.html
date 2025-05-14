@@ -114,26 +114,14 @@
                         scopes: ['User.Read', 'Calendars.Read'] // Be om nødvendige tillatelser
                     });
                 } else {
-                    // Håndter andre feil
-                    msalInstance.handleRedirectPromise().then((response) => {
-                        if (response) {
-                            console.log('Innlogging fullført. Brukerkonto mottatt fra omdirigering:', response.account);
-                            msalInstance.setActiveAccount(response.account); // Sett aktiv konto etter innlogging
-                        }
-
-                        const activeAccount = msalInstance.getActiveAccount();
-                        if (activeAccount) {
-                            handlePostLogin(msalInstance, graphConfig);
-                        } else {
-                            console.warn('Ingen aktiv konto funnet. Brukeren må logge inn manuelt.');
-                            loginButton.style.display = 'inline-block'; // Vis logg inn-knappen
-                        }
-
-                        loginButton.disabled = false; // Aktiver knappen etter at status er avklart
-                    }).catch((error) => {
-                        console.error('Feil ved håndtering av omdirigering:', error);
-                        loginButton.disabled = false; // Aktiver knappen selv om det oppstår en feil
-                    });
+                    console.error('SSO-feil: Brukeren må logge inn manuelt.');
+                    // Vis logg inn-knappen og skjul andre elementer
+                    document.getElementById('loginButton').style.display = 'inline-block';
+                    document.getElementById('fetchEventsButton').style.display = 'none';
+                    document.getElementById('datePicker').style.display = 'none';
+                    document.getElementById('logoutButton').style.display = 'none';
+                    document.getElementById('userName').textContent = 'Ikke pålogget';
+                    loginButton.disabled = false; // Aktiver logg inn-knappen
                 }
             });
 
@@ -759,4 +747,3 @@
     </script>
 </body>
 </html>
-`
