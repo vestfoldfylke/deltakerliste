@@ -96,113 +96,129 @@
 
             console.log('MSAL Configuration:', msalConfig);
 
-            msalInstance.handleRedirectPromise().then((response) => {
-                if (response) {
-                    console.log('Innlogging fullført. Brukerkonto mottatt fra omdirigering:', response.account);
-                    msalInstance.setActiveAccount(response.account); // Sett aktiv konto etter innlogging
-                }
-
-                const activeAccount = msalInstance.getActiveAccount();
-                if (activeAccount) {
-                    console.log('Aktiv konto funnet:', activeAccount);
-                    console.log('Account properties:', {
-                        username: activeAccount.username,
-                        homeAccountId: activeAccount.homeAccountId,
-                        localAccountId: activeAccount.localAccountId,
-                        nativeAccountId: activeAccount.nativeAccountId // This might be undefined in web apps
-                    });
-
-                    // Fetch the user's full name from Microsoft Graph API
-                    fetch(graphConfig.graphMeEndpoint, {
-                        headers: {
-                            Authorization: `Bearer ${response.accessToken || ''}`
-                        }
-                    })
-                    .then(res => res.json())
-                    .then(user => {
-                        document.getElementById('userName').textContent = user.displayName; // Update with full name
-                    })
-                    .catch(error => {
-                        console.error('Failed to fetch user details:', error);
-                        document.getElementById('userName').textContent = activeAccount.username; // Fallback to email
-                    });
-
-                    console.log(`Logget inn som ${activeAccount.username}`);
-                    document.getElementById('fetchEventsButton').style.display = 'inline-block';
-                    document.getElementById('datePicker').style.display = 'inline-block';
-                    document.getElementById('logoutButton').style.display = 'inline-block'; // Vis logg ut-knappen
-                    loginButton.style.display = 'none'; // Skjul logg inn-knappen
-                } else {
-                    console.warn('Ingen aktiv konto funnet. Brukeren må logge inn.');
-                    document.getElementById('logoutButton').style.display = 'none'; // Skjul logg ut-knappen
-                    loginButton.style.display = 'inline-block'; // Vis logg inn-knappen
-                }
-
-                loginButton.disabled = false; // Aktiver knappen etter at status er avklart
+            // Forsøk automatisk innlogging med SSO
+            msalInstance.ssoSilent({
+                scopes: ['User.Read', 'Calendars.Read'], // Be om nødvendige tillatelser
+                loginHint: '' // Kan settes til brukerens e-post hvis kjent
+            }).then((response) => {
+                console.log('SSO-innlogging vellykket:', response.account);
+                msalInstance.setActiveAccount(response.account); // Sett aktiv konto etter SSO
+                handlePostLogin(msalInstance, graphConfig);
             }).catch((error) => {
-                console.error('Feil ved håndtering av omdirigering:', error);
-                loginButton.disabled = false; // Aktiver knappen selv om det oppstår en feil
-            });
+                console.warn('SSO-innlogging feilet:', error);
 
-            // Unngå å sende brukeren tilbake til forsiden etter innlogging
-            if (msalInstance.getActiveAccount()) {
-                console.log(`Logget inn som ${msalInstance.getActiveAccount().username}`);
-                document.getElementById('fetchEventsButton').style.display = 'inline-block';
-                document.getElementById('datePicker').style.display = 'inline-block';
-                document.getElementById('logoutButton').style.display = 'inline-block'; // Vis logg ut-knappen
-                loginButton.style.display = 'none'; // Skjul logg inn-knappen
-                document.getElementById('userName').textContent = msalInstance.getActiveAccount().username; // Oppdater brukernavn
-            }
+                // Håndter omdirigering for manuell innlogging
+                msalInstance.handleRedirectPromise().then((response) => {
+                    if (response) {
+                        console.log('Innlogging fullført. Brukerkonto mottatt fra omdirigering:', response.account);
+                        msalInstance.setActiveAccount(response.account); // Sett aktiv konto etter innlogging
+                    }
 
-            loginButton.addEventListener('click', () => {
-                console.log('Starter innlogging og ber om nødvendige tillatelser...');
-                msalInstance.loginRedirect({
-                    scopes: ['User.Read', 'Calendars.Read'], // Be om nødvendige tillatelser
-                    prompt: 'consent' // Tving brukeren til å gi samtykke
+                    const activeAccount = msalInstance.getActiveAccount();
+                    if (activeAccount) {
+                        handlePostLogin(msalInstance, graphConfig);
+                    } else {
+                        console.warn('Ingen aktiv konto funnet. Brukeren må logge inn manuelt.');
+                        loginButton.style.display = 'inline-block'; // Vis logg inn-knappen
+                    }
+
+                    loginButton.disabled = false; // Aktiver knappen etter at status er avklart
+                }).catch((error) => {
+                    console.error('Feil ved håndtering av omdirigering:', error);
+                    loginButton.disabled = false; // Aktiver knappen selv om det oppstår en feil
                 });
             });
 
-            document.getElementById('fetchEventsButton').addEventListener('click', async () => {
-                try {
-                    const selectedDate = document.getElementById('datePicker').value;
-                    if (!selectedDate) {
-                        throw new Error('Velg en dato først.');
+            loginButton.addEventListener('click', () => {
+                console.log('Starter manuell innlogging...');
+                msalInstance.loginRedirect({
+                    scopes: ['User.Read', 'Calendars.Read'] // Be om nødvendige tillatelser
+                });
+            });
+
+            document.getElementById('logoutButton').addEventListener('click', () => {
+                msalInstance.logoutRedirect();
+            });
+        }
+
+        function handlePostLogin(msalInstance, graphConfig) {
+            const activeAccount = msalInstance.getActiveAccount();
+            if (activeAccount) {
+                console.log(`Logget inn som ${activeAccount.username}`);
+                document.getElementById('userName').textContent = activeAccount.username; // Oppdater brukernavn
+                document.getElementById('fetchEventsButton').style.display = 'inline-block';
+                document.getElementById('datePicker').style.display = 'inline-block';
+                document.getElementById('logoutButton').style.display = 'inline-block'; // Vis logg ut-knappen
+                document.getElementById('loginButton').style.display = 'none'; // Skjul logg inn-knappen
+            }
+        }
+
+        document.getElementById('fetchEventsButton').addEventListener('click', async () => {
+            try {
+                const selectedDate = document.getElementById('datePicker').value;
+                if (!selectedDate) {
+                    throw new Error('Velg en dato først.');
+                }
+
+                console.log('Valgt dato:', selectedDate); // Logg inputdato
+
+                // Nullstill visningen
+                document.getElementById('eventList').innerHTML = '';
+                document.getElementById('eventList').style.display = 'none';
+                document.getElementById('meetingDetails').style.display = 'none';
+                document.getElementById('previewTable').style.display = 'none';
+                document.getElementById('participantSummary').style.display = 'none';
+                document.getElementById('exportTableButton').style.display = 'none';
+                document.getElementById('printParticipantListButton').style.display = 'none';
+                document.getElementById('updateStatusButton').style.display = 'none';
+
+                const account = msalInstance.getActiveAccount();
+                if (!account) {
+                    throw new Error('Ingen brukerkonto funnet. Logg inn først.');
+                }
+
+                const tokenResponse = await msalInstance.acquireTokenSilent({
+                    scopes: ['Calendars.Read'],
+                    account: account
+                });
+
+                const eventsResponse = await fetch(`${graphConfig.graphEventsEndpoint}?startDateTime=${selectedDate}T00:00:00Z&endDateTime=${selectedDate}T23:59:59Z`, {
+                    headers: {
+                        Authorization: `Bearer ${tokenResponse.accessToken}`
                     }
+                });
 
-                    console.log('Valgt dato:', selectedDate); // Logg inputdato
+                const events = await eventsResponse.json();
+                console.log('Rådata fra API:', events); // Logg rådata fra API-et
+                console.log('Hendelser fra API:', events.value); // Logg hele hendelseslisten
 
-                    // Nullstill visningen
-                    document.getElementById('eventList').innerHTML = '';
-                    document.getElementById('eventList').style.display = 'none';
-                    document.getElementById('meetingDetails').style.display = 'none';
-                    document.getElementById('previewTable').style.display = 'none';
-                    document.getElementById('participantSummary').style.display = 'none';
-                    document.getElementById('exportTableButton').style.display = 'none';
-                    document.getElementById('printParticipantListButton').style.display = 'none';
-                    document.getElementById('updateStatusButton').style.display = 'none';
+                if (events.value && events.value.length > 0) {
+                    const filteredEvents = events.value.filter(event => {
+                        let eventStart = new Date(event.start.dateTime || event.start.date);
+                        let eventEnd = new Date(event.end.dateTime || event.end.date);
 
-                    const account = msalInstance.getActiveAccount();
-                    if (!account) {
-                        throw new Error('Ingen brukerkonto funnet. Logg inn først.');
-                    }
+                        // Juster tidene med to timer
+                        eventStart.setHours(eventStart.getHours() + 2);
+                        eventEnd.setHours(eventEnd.getHours() + 2);
 
-                    const tokenResponse = await msalInstance.acquireTokenSilent({
-                        scopes: ['Calendars.Read'],
-                        account: account
+                        console.log('Hendelse:');
+                        console.log('  Tittel:', event.subject || 'Ingen tittel'); // Logg tittel
+                        console.log('  Starttid (rådata):', event.start.dateTime || event.start.date); // Logg rå starttid
+                        console.log('  Sluttid (rådata):', event.end.dateTime || event.end.date); // Logg rå sluttid
+
+                        // Sjekk om hendelsen overlapper med den valgte datoen
+                        const selectedDateStart = new Date(`${selectedDate}T00:00:00`);
+                        const selectedDateEnd = new Date(`${selectedDate}T23:59:59`);
+
+                        const overlaps = eventStart <= selectedDateEnd && eventEnd >= selectedDateStart;
+                        console.log('  Overlapper valgt dato:', overlaps); // Logg om hendelsen overlapper
+
+                        return overlaps;
                     });
 
-                    const eventsResponse = await fetch(`${graphConfig.graphEventsEndpoint}?startDateTime=${selectedDate}T00:00:00Z&endDateTime=${selectedDate}T23:59:59Z`, {
-                        headers: {
-                            Authorization: `Bearer ${tokenResponse.accessToken}`
-                        }
-                    });
-
-                    const events = await eventsResponse.json();
-                    console.log('Rådata fra API:', events); // Logg rådata fra API-et
-                    console.log('Hendelser fra API:', events.value); // Logg hele hendelseslisten
-
-                    if (events.value && events.value.length > 0) {
-                        const filteredEvents = events.value.filter(event => {
+                    if (filteredEvents.length > 0) {
+                        const headers = ['Velg', 'Tittel', 'Dato', 'Starttid', 'Sluttid', 'Sted', 'Arrangør'];
+                        const rows = filteredEvents.map(event => {
                             let eventStart = new Date(event.start.dateTime || event.start.date);
                             let eventEnd = new Date(event.end.dateTime || event.end.date);
 
@@ -210,427 +226,401 @@
                             eventStart.setHours(eventStart.getHours() + 2);
                             eventEnd.setHours(eventEnd.getHours() + 2);
 
-                            console.log('Hendelse:');
-                            console.log('  Tittel:', event.subject || 'Ingen tittel'); // Logg tittel
-                            console.log('  Starttid (rådata):', event.start.dateTime || event.start.date); // Logg rå starttid
-                            console.log('  Sluttid (rådata):', event.end.dateTime || event.end.date); // Logg rå sluttid
+                            const eventStartLocal = eventStart.toLocaleString('no-NO', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone });
+                            const eventEndLocal = eventEnd.toLocaleString('no-NO', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone });
 
-                            // Sjekk om hendelsen overlapper med den valgte datoen
-                            const selectedDateStart = new Date(`${selectedDate}T00:00:00`);
-                            const selectedDateEnd = new Date(`${selectedDate}T23:59:59`);
-
-                            const overlaps = eventStart <= selectedDateEnd && eventEnd >= selectedDateStart;
-                            console.log('  Overlapper valgt dato:', overlaps); // Logg om hendelsen overlapper
-
-                            return overlaps;
-                        });
-
-                        if (filteredEvents.length > 0) {
-                            const headers = ['Velg', 'Tittel', 'Dato', 'Starttid', 'Sluttid', 'Sted', 'Arrangør'];
-                            const rows = filteredEvents.map(event => {
-                                let eventStart = new Date(event.start.dateTime || event.start.date);
-                                let eventEnd = new Date(event.end.dateTime || event.end.date);
-
-                                // Juster tidene med to timer
-                                eventStart.setHours(eventStart.getHours() + 2);
-                                eventEnd.setHours(eventEnd.getHours() + 2);
-
-                                const eventStartLocal = eventStart.toLocaleString('no-NO', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone });
-                                const eventEndLocal = eventEnd.toLocaleString('no-NO', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone });
-
-                                return `
-                                    <tr>
-                                        <td><input type="radio" name="event" value="${event.id}" /></td>
-                                        <td>${event.subject || 'Ingen tittel'}</td>
-                                        <td>${eventStartLocal.split(', ')[0]}</td>
-                                        <td>${event.isAllDay ? 'Heldag' : eventStartLocal.split(', ')[1]}</td>
-                                        <td>${event.isAllDay ? 'Heldag' : eventEndLocal.split(', ')[1]}</td>
-                                        <td>${event.location?.displayName || 'Ikke spesifisert'}</td>
-                                        <td>${event.organizer.emailAddress.name}</td>
-                                    </tr>
-                                `;
-                            }).join('');
-
-                            document.getElementById('eventList').innerHTML = `
-                                <table border="1" style="width: 100%; border-collapse: collapse;">
-                                    <thead>
-                                        <tr>${headers.map(header => `<th>${header}</th>`).join('')}</tr>
-                                    </thead>
-                                    <tbody>${rows}</tbody>
-                                </table>
+                            return `
+                                <tr>
+                                    <td><input type="radio" name="event" value="${event.id}" /></td>
+                                    <td>${event.subject || 'Ingen tittel'}</td>
+                                    <td>${eventStartLocal.split(', ')[0]}</td>
+                                    <td>${event.isAllDay ? 'Heldag' : eventStartLocal.split(', ')[1]}</td>
+                                    <td>${event.isAllDay ? 'Heldag' : eventEndLocal.split(', ')[1]}</td>
+                                    <td>${event.location?.displayName || 'Ikke spesifisert'}</td>
+                                    <td>${event.organizer.emailAddress.name}</td>
+                                </tr>
                             `;
-                            document.getElementById('eventList').style.display = 'block';
-                        } else {
-                            console.log('Ingen kalenderhendelser funnet for valgt dato.');
-                        }
+                        }).join('');
+
+                        document.getElementById('eventList').innerHTML = `
+                            <table border="1" style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr>${headers.map(header => `<th>${header}</th>`).join('')}</tr>
+                                </thead>
+                                <tbody>${rows}</tbody>
+                            </table>
+                        `;
+                        document.getElementById('eventList').style.display = 'block';
                     } else {
                         console.log('Ingen kalenderhendelser funnet for valgt dato.');
                     }
-                } catch (error) {
-                    console.error('Feil ved henting av kalenderhendelser:', error.message);
+                } else {
+                    console.log('Ingen kalenderhendelser funnet for valgt dato.');
                 }
-            });
+            } catch (error) {
+                console.error('Feil ved henting av kalenderhendelser:', error.message);
+            }
+        });
 
-            document.getElementById('eventList').addEventListener('change', async () => {
-                try {
-                    const selectedEvent = document.querySelector('input[name="event"]:checked');
-                    if (!selectedEvent) {
-                        throw new Error('Velg en kalenderhendelse først.');
-                    }
-
-                    const selectedEventId = selectedEvent.value;
-                    const account = msalInstance.getActiveAccount();
-                    const tokenResponse = await msalInstance.acquireTokenSilent({
-                        scopes: ['Calendars.Read'],
-                        account: account
-                    });
-
-                    const eventResponse = await fetch(`${graphConfig.graphEventsEndpoint}/${selectedEventId}`, {
-                        headers: {
-                            Authorization: `Bearer ${tokenResponse.accessToken}`
-                        }
-                    });
-
-                    const event = await eventResponse.json();
-                    displayMeetingDetails(event); // Display meeting details
-                    const meetingData = parseGraphEvents([event]);
-
-                    // Vis forhåndsvisning av tabellen
-                    displayPreviewTable(meetingData);
-
-                    // Vis Oppdater status-knappen
-                    document.getElementById('updateStatusButton').style.display = 'inline-block';
-                } catch (error) {
-                    console.log(`Feil ved henting av kalenderhendelse: ${error.message}`);
-                }
-            });
-
-            document.getElementById('updateStatusButton').addEventListener('click', async () => {
-                try {
-                    const selectedEvent = document.querySelector('input[name="event"]:checked');
-                    if (!selectedEvent) {
-                        throw new Error('Velg en kalenderhendelse først.');
-                    }
-
-                    const selectedEventId = selectedEvent.value;
-                    const account = msalInstance.getActiveAccount();
-                    const tokenResponse = await msalInstance.acquireTokenSilent({
-                        scopes: ['Calendars.Read'],
-                        account: account
-                    });
-
-                    const eventResponse = await fetch(`${graphConfig.graphEventsEndpoint}/${selectedEventId}`, {
-                        headers: {
-                            Authorization: `Bearer ${tokenResponse.accessToken}`
-                        }
-                    });
-
-                    const event = await eventResponse.json();
-                    const meetingData = parseGraphEvents([event]);
-
-                    // Oppdater forhåndsvisningstabellen med de nyeste dataene
-                    displayPreviewTable(meetingData);
-
-                    console.log('Status oppdatert!');
-                } catch (error) {
-                    console.log(`Feil ved oppdatering av status: ${error.message}`);
-                }
-            });
-
-            document.getElementById('printParticipantListButton').addEventListener('click', async () => {
-                const tableRows = Array.from(document.querySelectorAll('#dataTable tbody tr'))
-                    .filter(row => row.querySelector('.accepted-checkbox').checked) // Filter only accepted participants
-                    .map(row => ({
-                        firstName: row.cells[1].textContent.trim(), // First name in the second cell
-                        lastName: row.cells[2].textContent.trim(),  // Last name in the third cell
-                        email: row.cells[10].textContent.trim()     // Email in the eleventh cell
-                    }));
-
-                if (tableRows.length === 0) {
-                    console.log('Ingen aksepterte deltakere å skrive ut.');
-                    return;
+        document.getElementById('eventList').addEventListener('change', async () => {
+            try {
+                const selectedEvent = document.querySelector('input[name="event"]:checked');
+                if (!selectedEvent) {
+                    throw new Error('Velg en kalenderhendelse først.');
                 }
 
-                const { jsPDF } = window.jspdf; // Ensure jsPDF is correctly referenced
-                const doc = new jsPDF();
-
-                // Add VFK logo to the top-left corner
-                const logoPath = 'vfk_logo.png'; // Path to the logo file
-                const logoWidth = 50; // Width of the logo in mm
-                const logoHeight = 20; // Height of the logo in mm
-                doc.addImage(logoPath, 'PNG', 10, 10, logoWidth, logoHeight);
-
-                // Add title
-                const meetingTitle = document.getElementById('meetingTitle')?.textContent?.trim() || 'Ingen tittel';
-                doc.setFont('Nunito Sans', 'bold');
-                doc.setFontSize(16);
-                doc.text(meetingTitle, 105, 15, { align: 'center' });
-
-                doc.setFont('Nunito Sans', 'normal');
-                doc.setFontSize(18);
-                doc.text('Deltakerliste', 105, 25, { align: 'center' });
-
-                // Add meeting overview in the PDF with the updated "Tid" format
-                const meetingDate = document.getElementById('meetingDate')?.textContent?.trim() || 'Ukjent dato';
-                const meetingStartTime = document.getElementById('meetingStartTime')?.textContent?.trim() || 'Ukjent starttid';
-                const meetingEndTime = document.getElementById('meetingEndTime')?.textContent?.trim() || 'Ukjent sluttid';
-                const meetingLocation = document.getElementById('meetingLocation')?.textContent?.trim() || 'Ikke spesifisert';
-                const meetingOrganizer = document.getElementById('meetingOrganizer')?.textContent?.trim() || 'Ikke spesifisert';
-
-                doc.setFontSize(12);
-                doc.setTextColor(0, 82, 96); // Match the primary color
-                doc.text('Møteinformasjon', 10, 40);
-
-                doc.setFontSize(10);
-                doc.setTextColor(0, 0, 0); // Default text color
-                doc.text(`Dato:`, 10, 50);
-                doc.setFont('Nunito Sans', 'bold');
-                doc.text(meetingDate, 40, 50);
-
-                doc.setFont('Nunito Sans', 'normal');
-                doc.text(`Tid:`, 10, 60);
-                doc.setFont('Nunito Sans', 'bold');
-                doc.text(`${meetingStartTime} til ${meetingEndTime}`, 40, 60);
-
-                doc.setFont('Nunito Sans', 'normal');
-                doc.text(`Sted:`, 10, 70);
-                doc.setFont('Nunito Sans', 'bold');
-                doc.text(meetingLocation, 40, 70);
-
-                doc.setFont('Nunito Sans', 'normal');
-                doc.text(`Arrangør:`, 10, 80);
-                doc.setFont('Nunito Sans', 'bold');
-                doc.text(meetingOrganizer, 40, 80);
-
-                // Add participant count overview
-                const acceptedCount = tableRows.length;
-                const totalCount = document.querySelectorAll('#dataTable tbody tr').length;
-                doc.setFont('Nunito Sans', 'normal');
-                doc.text(`Antall deltakere:`, 10, 90);
-                doc.setFont('Nunito Sans', 'bold');
-                doc.text(`${acceptedCount} av ${totalCount} inviterte`, 50, 90);
-
-                // Add table with participants
-                const tableData = tableRows.map(row => [
-                    row.firstName,
-                    row.lastName,
-                    row.email,
-                    '' // Empty box for "Møtt"
-                ]);
-
-                doc.autoTable({
-                    head: [['Fornavn', 'Etternavn', 'E-post', 'Møtt']],
-                    body: tableData,
-                    startY: 100,
-                    theme: 'grid',
-                    headStyles: {
-                        fillColor: [0, 82, 96],
-                        textColor: [255, 255, 255],
-                        fontSize: 12,
-                        fontStyle: 'bold'
-                    },
-                    bodyStyles: {
-                        fontSize: 10,
-                        textColor: [40, 40, 40]
-                    },
-                    alternateRowStyles: {
-                        fillColor: [242, 246, 247]
-                    },
-                    margin: { top: 100 }
+                const selectedEventId = selectedEvent.value;
+                const account = msalInstance.getActiveAccount();
+                const tokenResponse = await msalInstance.acquireTokenSilent({
+                    scopes: ['Calendars.Read'],
+                    account: account
                 });
 
-                // Add footer
-                const pageCount = doc.internal.getNumberOfPages();
-                for (let i = 1; i <= pageCount; i++) {
-                    doc.setPage(i);
-                    doc.setFontSize(10);
-                    doc.text(`Side ${i} av ${pageCount}`, 105, 290, { align: 'center' });
-                }
-
-                doc.save('Deltakerliste.pdf');
-            });
-
-            document.getElementById('logoutButton').addEventListener('click', () => {
-                msalInstance.logoutRedirect();
-            });
-
-            function parseGraphEvents(events) {
-                const participants = events.flatMap(event =>
-                    event.attendees.map(attendee => ({
-                        firstName: attendee.emailAddress.name.split(' ')[0],
-                        lastName: attendee.emailAddress.name.split(' ')[1] || '',
-                        email: attendee.emailAddress.address,
-                        status: attendee.status.response || 'unknown' // Legg til status
-                    }))
-                );
-
-                return {
-                    startTime: events[0]?.start?.dateTime || 'Ukjent starttid',
-                    endTime: events[0]?.end?.dateTime || 'Ukjent sluttid',
-                    participants
-                };
-            }
-
-            function generateExcel(meetingData) {
-                const worksheetData = [
-                    ['Fornavn', 'Etternavn', 'E-post', 'Starttid', 'Sluttid'],
-                    ...Array.from(document.querySelectorAll('#dataTable tbody tr'))
-                        .filter(row => row.querySelector('.accepted-checkbox').checked)
-                        .map(row => [
-                            row.cells[0].textContent.trim(),
-                            row.cells[1].textContent.trim(),
-                            row.cells[2].textContent.trim(),
-                            meetingData.startTime,
-                            meetingData.endTime
-                        ])
-                ];
-                const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
-                const workbook = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(workbook, worksheet, 'Deltakere');
-                const fileName = 'Møtedeltakere.xlsx';
-                XLSX.writeFile(workbook, fileName);
-                return fileName;
-            }
-
-            function toggleAllAccepted(checkbox) {
-                const participantCheckboxes = document.querySelectorAll('.accepted-checkbox');
-                participantCheckboxes.forEach(cb => cb.checked = checkbox.checked);
-                updateParticipantSummary(); // Update the summary dynamically
-            }
-
-            function displayPreviewTable(meetingData) {
-                const previewTable = document.getElementById('previewTable');
-                const participantSummary = document.getElementById('participantSummary');
-                const acceptedCountElement = document.getElementById('acceptedCount');
-                const notAcceptedCountElement = document.getElementById('notAcceptedCount');
-
-                const headers = ['<input type="checkbox" id="toggleAllAccepted" onclick="toggleAllAccepted(this)" />', 'Fornavn', 'Etternavn', 'Firma', 'Mobil', 'Nøkkelord', 'Starttid', 'Sluttid', 'Kortnummer', 'Kommentar', 'E-post'];
-                const rows = meetingData.participants.map(p => {
-                    let firstName = p.firstName;
-                    if (firstName.includes('@')) {
-                        firstName = firstName.split('@')[0]; // Extract the portion before '@'
+                const eventResponse = await fetch(`${graphConfig.graphEventsEndpoint}/${selectedEventId}`, {
+                    headers: {
+                        Authorization: `Bearer ${tokenResponse.accessToken}`
                     }
+                });
 
-                    const firma = p.email.split('@')[1]?.split('.')[0] || 'Ukjent'; // Extract domain name from email
-                    const isAccepted = p.status === 'accepted'; // Check if status is "Accepted"
+                const event = await eventResponse.json();
+                displayMeetingDetails(event); // Display meeting details
+                const meetingData = parseGraphEvents([event]);
 
-                    // Adjust start and end times by two hours
-                    const adjustedStartTime = new Date(meetingData.startTime);
-                    const adjustedEndTime = new Date(meetingData.endTime);
-                    adjustedStartTime.setHours(adjustedStartTime.getHours() + 2);
-                    adjustedEndTime.setHours(adjustedEndTime.getHours() + 2);
+                // Vis forhåndsvisning av tabellen
+                displayPreviewTable(meetingData);
 
-                    return `
-                        <tr>
-                            <td><input type="checkbox" class="accepted-checkbox" ${isAccepted ? 'checked' : ''} /></td>
-                            <td contenteditable="true">${firstName}</td>
-                            <td contenteditable="true">${p.lastName}</td>
-                            <td contenteditable="true">${firma}</td>
-                            <td contenteditable="true">${p.mobile || ''}</td>
-                            <td contenteditable="true"></td>
-                            <td>${adjustedStartTime.toLocaleDateString()} ${adjustedStartTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
-                            <td>${adjustedEndTime.toLocaleDateString()} ${adjustedEndTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
-                            <td contenteditable="true"></td>
-                            <td contenteditable="true"></td>
-                            <td contenteditable="true">${p.email}</td>
-                        </tr>
-                    `;
-                }).join('');
-
-                previewTable.innerHTML = `
-                    <table id="dataTable" border="1" style="width: 100%; border-collapse: collapse;">
-                        <thead>
-                            <tr>${headers.map(header => `<th>${header}</th>`).join('')}</tr>
-                        </thead>
-                        <tbody>${rows}</tbody>
-                    </table>
-                `;
-                previewTable.style.display = 'block';
-
-                // Calculate and display participant summary
-                const acceptedCount = meetingData.participants.filter(p => p.status === 'accepted').length;
-                const notAcceptedCount = meetingData.participants.length - acceptedCount;
-
-                acceptedCountElement.textContent = acceptedCount;
-                notAcceptedCountElement.textContent = notAcceptedCount;
-                participantSummary.style.display = 'block';
-
-                // Show export and print buttons
-                document.getElementById('exportTableButton').style.display = 'inline-block';
-                document.getElementById('printParticipantListButton').style.display = 'inline-block';
+                // Vis Oppdater status-knappen
+                document.getElementById('updateStatusButton').style.display = 'inline-block';
+            } catch (error) {
+                console.log(`Feil ved henting av kalenderhendelse: ${error.message}`);
             }
+        });
 
-            function displayMeetingDetails(event) {
-                const meetingDetails = document.getElementById('meetingDetails');
-                let eventStart = new Date(event.start.dateTime || event.start.date);
-                let eventEnd = new Date(event.end.dateTime || event.end.date);
-
-                // Juster tidene med to timer
-                eventStart.setHours(eventStart.getHours() + 2);
-                eventEnd.setHours(eventEnd.getHours() + 2);
-
-                document.getElementById('meetingTitle').textContent = event.subject || 'Ingen tittel';
-                document.getElementById('meetingDate').textContent = eventStart.toLocaleDateString('no-NO');
-                document.getElementById('meetingStartTime').textContent = eventStart.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                document.getElementById('meetingEndTime').textContent = eventEnd.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                document.getElementById('meetingLocation').textContent = event.location?.displayName || 'Ikke spesifisert';
-                document.getElementById('meetingOrganizer').textContent = event.organizer.emailAddress.name || 'Ikke spesifisert';
-                meetingDetails.style.display = 'block';
-            }
-
-            document.getElementById('exportTableButton').addEventListener('click', () => {
-                const tableRows = Array.from(document.querySelectorAll('#dataTable tbody tr'))
-                    .filter(row => row.querySelector('.accepted-checkbox').checked) // Dynamically filter based on "Akseptert" checkbox
-                    .map(row => Array.from(row.cells).slice(1).map(cell => cell.textContent.trim())); // Exclude the first cell (Akseptert)
-
-                if (tableRows.length === 0) {
-                    console.log('Ingen data å eksportere.');
-                    return;
+        document.getElementById('updateStatusButton').addEventListener('click', async () => {
+            try {
+                const selectedEvent = document.querySelector('input[name="event"]:checked');
+                if (!selectedEvent) {
+                    throw new Error('Velg en kalenderhendelse først.');
                 }
 
-                const headers = Array.from(document.querySelectorAll('#dataTable thead th'))
-                    .slice(1) // Exclude the first column (Akseptert)
-                    .map(header => header.textContent.trim());
+                const selectedEventId = selectedEvent.value;
+                const account = msalInstance.getActiveAccount();
+                const tokenResponse = await msalInstance.acquireTokenSilent({
+                    scopes: ['Calendars.Read'],
+                    account: account
+                });
 
-                const worksheetData = [headers, ...tableRows]; // Combine headers and rows
+                const eventResponse = await fetch(`${graphConfig.graphEventsEndpoint}/${selectedEventId}`, {
+                    headers: {
+                        Authorization: `Bearer ${tokenResponse.accessToken}`
+                    }
+                });
 
-                const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
-                const workbook = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(workbook, worksheet, 'Deltakere');
+                const event = await eventResponse.json();
+                const meetingData = parseGraphEvents([event]);
 
-                // Fetch title and date from the meeting details
-                const meetingTitle = document.getElementById('meetingTitle').textContent.trim() || 'Ingen tittel';
-                const meetingDate = document.getElementById('meetingDate').textContent.trim() || 'Ukjent dato';
+                // Oppdater forhåndsvisningstabellen med de nyeste dataene
+                displayPreviewTable(meetingData);
 
-                // Generate filename
-                const fileName = `Deltakerliste ${meetingTitle} - ${meetingDate}.xlsx`.replace(/[/\\?%*:|"<>]/g, ''); // Remove invalid characters
+                console.log('Status oppdatert!');
+            } catch (error) {
+                console.log(`Feil ved oppdatering av status: ${error.message}`);
+            }
+        });
 
-                XLSX.writeFile(workbook, fileName);
-            });
+        document.getElementById('printParticipantListButton').addEventListener('click', async () => {
+            const tableRows = Array.from(document.querySelectorAll('#dataTable tbody tr'))
+                .filter(row => row.querySelector('.accepted-checkbox').checked) // Filter only accepted participants
+                .map(row => ({
+                    firstName: row.cells[1].textContent.trim(), // First name in the second cell
+                    lastName: row.cells[2].textContent.trim(),  // Last name in the third cell
+                    email: row.cells[10].textContent.trim()     // Email in the eleventh cell
+                }));
 
-            function exportTableToExcel(tableId, filename) {
-                const table = document.getElementById(tableId);
-                const worksheet = XLSX.utils.table_to_sheet(table);
-                const workbook = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(workbook, worksheet, 'Deltakere');
-                XLSX.writeFile(workbook, filename);
+            if (tableRows.length === 0) {
+                console.log('Ingen aksepterte deltakere å skrive ut.');
+                return;
             }
 
-            function updateParticipantSummary() {
-                const checkboxes = document.querySelectorAll('.accepted-checkbox');
-                const acceptedCount = Array.from(checkboxes).filter(checkbox => checkbox.checked).length;
-                const notAcceptedCount = checkboxes.length - acceptedCount;
+            const { jsPDF } = window.jspdf; // Ensure jsPDF is correctly referenced
+            const doc = new jsPDF();
 
-                document.getElementById('acceptedCount').textContent = acceptedCount;
-                document.getElementById('notAcceptedCount').textContent = notAcceptedCount;
+            // Add VFK logo to the top-left corner
+            const logoPath = 'vfk_logo.png'; // Path to the logo file
+            const logoWidth = 50; // Width of the logo in mm
+            const logoHeight = 20; // Height of the logo in mm
+            doc.addImage(logoPath, 'PNG', 10, 10, logoWidth, logoHeight);
+
+            // Add title
+            const meetingTitle = document.getElementById('meetingTitle')?.textContent?.trim() || 'Ingen tittel';
+            doc.setFont('Nunito Sans', 'bold');
+            doc.setFontSize(16);
+            doc.text(meetingTitle, 105, 15, { align: 'center' });
+
+            doc.setFont('Nunito Sans', 'normal');
+            doc.setFontSize(18);
+            doc.text('Deltakerliste', 105, 25, { align: 'center' });
+
+            // Add meeting overview in the PDF with the updated "Tid" format
+            const meetingDate = document.getElementById('meetingDate')?.textContent?.trim() || 'Ukjent dato';
+            const meetingStartTime = document.getElementById('meetingStartTime')?.textContent?.trim() || 'Ukjent starttid';
+            const meetingEndTime = document.getElementById('meetingEndTime')?.textContent?.trim() || 'Ukjent sluttid';
+            const meetingLocation = document.getElementById('meetingLocation')?.textContent?.trim() || 'Ikke spesifisert';
+            const meetingOrganizer = document.getElementById('meetingOrganizer')?.textContent?.trim() || 'Ikke spesifisert';
+
+            doc.setFontSize(12);
+            doc.setTextColor(0, 82, 96); // Match the primary color
+            doc.text('Møteinformasjon', 10, 40);
+
+            doc.setFontSize(10);
+            doc.setTextColor(0, 0, 0); // Default text color
+            doc.text(`Dato:`, 10, 50);
+            doc.setFont('Nunito Sans', 'bold');
+            doc.text(meetingDate, 40, 50);
+
+            doc.setFont('Nunito Sans', 'normal');
+            doc.text(`Tid:`, 10, 60);
+            doc.setFont('Nunito Sans', 'bold');
+            doc.text(`${meetingStartTime} til ${meetingEndTime}`, 40, 60);
+
+            doc.setFont('Nunito Sans', 'normal');
+            doc.text(`Sted:`, 10, 70);
+            doc.setFont('Nunito Sans', 'bold');
+            doc.text(meetingLocation, 40, 70);
+
+            doc.setFont('Nunito Sans', 'normal');
+            doc.text(`Arrangør:`, 10, 80);
+            doc.setFont('Nunito Sans', 'bold');
+            doc.text(meetingOrganizer, 40, 80);
+
+            // Add participant count overview
+            const acceptedCount = tableRows.length;
+            const totalCount = document.querySelectorAll('#dataTable tbody tr').length;
+            doc.setFont('Nunito Sans', 'normal');
+            doc.text(`Antall deltakere:`, 10, 90);
+            doc.setFont('Nunito Sans', 'bold');
+            doc.text(`${acceptedCount} av ${totalCount} inviterte`, 50, 90);
+
+            // Add table with participants
+            const tableData = tableRows.map(row => [
+                row.firstName,
+                row.lastName,
+                row.email,
+                '' // Empty box for "Møtt"
+            ]);
+
+            doc.autoTable({
+                head: [['Fornavn', 'Etternavn', 'E-post', 'Møtt']],
+                body: tableData,
+                startY: 100,
+                theme: 'grid',
+                headStyles: {
+                    fillColor: [0, 82, 96],
+                    textColor: [255, 255, 255],
+                    fontSize: 12,
+                    fontStyle: 'bold'
+                },
+                bodyStyles: {
+                    fontSize: 10,
+                    textColor: [40, 40, 40]
+                },
+                alternateRowStyles: {
+                    fillColor: [242, 246, 247]
+                },
+                margin: { top: 100 }
+            });
+
+            // Add footer
+            const pageCount = doc.internal.getNumberOfPages();
+            for (let i = 1; i <= pageCount; i++) {
+                doc.setPage(i);
+                doc.setFontSize(10);
+                doc.text(`Side ${i} av ${pageCount}`, 105, 290, { align: 'center' });
             }
 
-            document.addEventListener('change', (event) => {
-                if (event.target.classList.contains('accepted-checkbox')) {
-                    updateParticipantSummary();
-                }
-            });
+            doc.save('Deltakerliste.pdf');
+        });
+
+        document.getElementById('logoutButton').addEventListener('click', () => {
+            msalInstance.logoutRedirect();
+        });
+
+        function parseGraphEvents(events) {
+            const participants = events.flatMap(event =>
+                event.attendees.map(attendee => ({
+                    firstName: attendee.emailAddress.name.split(' ')[0],
+                    lastName: attendee.emailAddress.name.split(' ')[1] || '',
+                    email: attendee.emailAddress.address,
+                    status: attendee.status.response || 'unknown' // Legg til status
+                }))
+            );
+
+            return {
+                startTime: events[0]?.start?.dateTime || 'Ukjent starttid',
+                endTime: events[0]?.end?.dateTime || 'Ukjent sluttid',
+                participants
+            };
         }
+
+        function generateExcel(meetingData) {
+            const worksheetData = [
+                ['Fornavn', 'Etternavn', 'E-post', 'Starttid', 'Sluttid'],
+                ...Array.from(document.querySelectorAll('#dataTable tbody tr'))
+                    .filter(row => row.querySelector('.accepted-checkbox').checked)
+                    .map(row => [
+                        row.cells[0].textContent.trim(),
+                        row.cells[1].textContent.trim(),
+                        row.cells[2].textContent.trim(),
+                        meetingData.startTime,
+                        meetingData.endTime
+                    ])
+            ];
+            const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Deltakere');
+            const fileName = 'Møtedeltakere.xlsx';
+            XLSX.writeFile(workbook, fileName);
+            return fileName;
+        }
+
+        function toggleAllAccepted(checkbox) {
+            const participantCheckboxes = document.querySelectorAll('.accepted-checkbox');
+            participantCheckboxes.forEach(cb => cb.checked = checkbox.checked);
+            updateParticipantSummary(); // Update the summary dynamically
+        }
+
+        function displayPreviewTable(meetingData) {
+            const previewTable = document.getElementById('previewTable');
+            const participantSummary = document.getElementById('participantSummary');
+            const acceptedCountElement = document.getElementById('acceptedCount');
+            const notAcceptedCountElement = document.getElementById('notAcceptedCount');
+
+            const headers = ['<input type="checkbox" id="toggleAllAccepted" onclick="toggleAllAccepted(this)" />', 'Fornavn', 'Etternavn', 'Firma', 'Mobil', 'Nøkkelord', 'Starttid', 'Sluttid', 'Kortnummer', 'Kommentar', 'E-post'];
+            const rows = meetingData.participants.map(p => {
+                let firstName = p.firstName;
+                if (firstName.includes('@')) {
+                    firstName = firstName.split('@')[0]; // Extract the portion before '@'
+                }
+
+                const firma = p.email.split('@')[1]?.split('.')[0] || 'Ukjent'; // Extract domain name from email
+                const isAccepted = p.status === 'accepted'; // Check if status is "Accepted"
+
+                // Adjust start and end times by two hours
+                const adjustedStartTime = new Date(meetingData.startTime);
+                const adjustedEndTime = new Date(meetingData.endTime);
+                adjustedStartTime.setHours(adjustedStartTime.getHours() + 2);
+                adjustedEndTime.setHours(adjustedEndTime.getHours() + 2);
+
+                return `
+                    <tr>
+                        <td><input type="checkbox" class="accepted-checkbox" ${isAccepted ? 'checked' : ''} /></td>
+                        <td contenteditable="true">${firstName}</td>
+                        <td contenteditable="true">${p.lastName}</td>
+                        <td contenteditable="true">${firma}</td>
+                        <td contenteditable="true">${p.mobile || ''}</td>
+                        <td contenteditable="true"></td>
+                        <td>${adjustedStartTime.toLocaleDateString()} ${adjustedStartTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+                        <td>${adjustedEndTime.toLocaleDateString()} ${adjustedEndTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+                        <td contenteditable="true"></td>
+                        <td contenteditable="true"></td>
+                        <td contenteditable="true">${p.email}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            previewTable.innerHTML = `
+                <table id="dataTable" border="1" style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr>${headers.map(header => `<th>${header}</th>`).join('')}</tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            `;
+            previewTable.style.display = 'block';
+
+            // Calculate and display participant summary
+            const acceptedCount = meetingData.participants.filter(p => p.status === 'accepted').length;
+            const notAcceptedCount = meetingData.participants.length - acceptedCount;
+
+            acceptedCountElement.textContent = acceptedCount;
+            notAcceptedCountElement.textContent = notAcceptedCount;
+            participantSummary.style.display = 'block';
+
+            // Show export and print buttons
+            document.getElementById('exportTableButton').style.display = 'inline-block';
+            document.getElementById('printParticipantListButton').style.display = 'inline-block';
+        }
+
+        function displayMeetingDetails(event) {
+            const meetingDetails = document.getElementById('meetingDetails');
+            let eventStart = new Date(event.start.dateTime || event.start.date);
+            let eventEnd = new Date(event.end.dateTime || event.end.date);
+
+            // Juster tidene med to timer
+            eventStart.setHours(eventStart.getHours() + 2);
+            eventEnd.setHours(eventEnd.getHours() + 2);
+
+            document.getElementById('meetingTitle').textContent = event.subject || 'Ingen tittel';
+            document.getElementById('meetingDate').textContent = eventStart.toLocaleDateString('no-NO');
+            document.getElementById('meetingStartTime').textContent = eventStart.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            document.getElementById('meetingEndTime').textContent = eventEnd.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            document.getElementById('meetingLocation').textContent = event.location?.displayName || 'Ikke spesifisert';
+            document.getElementById('meetingOrganizer').textContent = event.organizer.emailAddress.name || 'Ikke spesifisert';
+            meetingDetails.style.display = 'block';
+        }
+
+        document.getElementById('exportTableButton').addEventListener('click', () => {
+            const tableRows = Array.from(document.querySelectorAll('#dataTable tbody tr'))
+                .filter(row => row.querySelector('.accepted-checkbox').checked) // Dynamically filter based on "Akseptert" checkbox
+                .map(row => Array.from(row.cells).slice(1).map(cell => cell.textContent.trim())); // Exclude the first cell (Akseptert)
+
+            if (tableRows.length === 0) {
+                console.log('Ingen data å eksportere.');
+                return;
+            }
+
+            const headers = Array.from(document.querySelectorAll('#dataTable thead th'))
+                .slice(1) // Exclude the first column (Akseptert)
+                .map(header => header.textContent.trim());
+
+            const worksheetData = [headers, ...tableRows]; // Combine headers and rows
+
+            const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Deltakere');
+
+            // Fetch title and date from the meeting details
+            const meetingTitle = document.getElementById('meetingTitle').textContent.trim() || 'Ingen tittel';
+            const meetingDate = document.getElementById('meetingDate').textContent.trim() || 'Ukjent dato';
+
+            // Generate filename
+            const fileName = `Deltakerliste ${meetingTitle} - ${meetingDate}.xlsx`.replace(/[/\\?%*:|"<>]/g, ''); // Remove invalid characters
+
+            XLSX.writeFile(workbook, fileName);
+        });
+
+        function exportTableToExcel(tableId, filename) {
+            const table = document.getElementById(tableId);
+            const worksheet = XLSX.utils.table_to_sheet(table);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Deltakere');
+            XLSX.writeFile(workbook, filename);
+        }
+
+        function updateParticipantSummary() {
+            const checkboxes = document.querySelectorAll('.accepted-checkbox');
+            const acceptedCount = Array.from(checkboxes).filter(checkbox => checkbox.checked).length;
+            const notAcceptedCount = checkboxes.length - acceptedCount;
+
+            document.getElementById('acceptedCount').textContent = acceptedCount;
+            document.getElementById('notAcceptedCount').textContent = notAcceptedCount;
+        }
+
+        document.addEventListener('change', (event) => {
+            if (event.target.classList.contains('accepted-checkbox')) {
+                updateParticipantSummary();
+            }
+        });
 
         loadEnvVariables();
     </script>
