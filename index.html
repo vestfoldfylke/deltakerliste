@@ -234,9 +234,11 @@
                                     <tbody>${rows}</tbody>
                                 </table>
                             `;
-                            document.getElementById('eventList').style.display = 'block';
+                            document.getElementById('eventList').style.display = 'block'; // Ensure the event list is visible
                         } else {
                             console.log('Ingen kalenderhendelser funnet for valgt dato.');
+                            document.getElementById('eventList').innerHTML = '<p>Ingen hendelser funnet for valgt dato.</p>';
+                            document.getElementById('eventList').style.display = 'block'; // Show the message
                         }
                     } else {
                         console.log('Ingen kalenderhendelser funnet for valgt dato.');
@@ -361,9 +363,11 @@
                                 <tbody>${rows}</tbody>
                             </table>
                         `;
-                        document.getElementById('eventList').style.display = 'block';
+                        document.getElementById('eventList').style.display = 'block'; // Ensure the event list is visible
                     } else {
                         console.log('Ingen kalenderhendelser funnet for valgt dato.');
+                        document.getElementById('eventList').innerHTML = '<p>Ingen hendelser funnet for valgt dato.</p>';
+                        document.getElementById('eventList').style.display = 'block'; // Show the message
                     }
                 } else {
                     console.log('Ingen kalenderhendelser funnet for valgt dato.');
