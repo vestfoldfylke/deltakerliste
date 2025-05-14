@@ -138,14 +138,6 @@
 
             // Aktiver fetchEventsButton etter at msalInstance er initialisert
             document.getElementById('fetchEventsButton').addEventListener('click', async () => {
-                if (!msalInstance) {
-                    console.error('msalInstance er ikke initialisert.');
-                    return;
-                }
-                const graphConfig = {
-                    graphMeEndpoint: 'https://graph.microsoft.com/v1.0/me',
-                    graphEventsEndpoint: 'https://graph.microsoft.com/v1.0/me/events'
-                };
                 try {
                     const selectedDate = document.getElementById('datePicker').value;
                     if (!selectedDate) {
@@ -153,6 +145,13 @@
                     }
 
                     console.log('Valgt dato:', selectedDate); // Logg inputdato
+
+                    // Format the selected date to ISO 8601 format
+                    const startDateTime = new Date(`${selectedDate}T00:00:00`).toISOString();
+                    const endDateTime = new Date(`${selectedDate}T23:59:59`).toISOString();
+
+                    console.log('Startdato og tid (ISO):', startDateTime);
+                    console.log('Sluttdato og tid (ISO):', endDateTime);
 
                     // Nullstill visningen
                     document.getElementById('eventList').innerHTML = '';
@@ -174,7 +173,12 @@
                         account: account
                     });
 
-                    const eventsResponse = await fetch(`${graphConfig.graphEventsEndpoint}?startDateTime=${selectedDate}T00:00:00Z&endDateTime=${selectedDate}T23:59:59Z`, {
+                    const graphConfig = {
+                        graphMeEndpoint: 'https://graph.microsoft.com/v1.0/me',
+                        graphEventsEndpoint: 'https://graph.microsoft.com/v1.0/me/events'
+                    };
+
+                    const eventsResponse = await fetch(`${graphConfig.graphEventsEndpoint}?startDateTime=${startDateTime}&endDateTime=${endDateTime}`, {
                         headers: {
                             Authorization: `Bearer ${tokenResponse.accessToken}`
                         }
@@ -260,122 +264,6 @@
                 document.getElementById('loginButton').style.display = 'none'; // Skjul logg inn-knappen
             }
         }
-
-        document.getElementById('fetchEventsButton').addEventListener('click', async () => {
-            try {
-                const selectedDate = document.getElementById('datePicker').value;
-                if (!selectedDate) {
-                    throw new Error('Velg en dato først.');
-                }
-
-                console.log('Valgt dato:', selectedDate); // Logg inputdato
-
-                // Nullstill visningen
-                document.getElementById('eventList').innerHTML = '';
-                document.getElementById('eventList').style.display = 'none';
-                document.getElementById('meetingDetails').style.display = 'none';
-                document.getElementById('previewTable').style.display = 'none';
-                document.getElementById('participantSummary').style.display = 'none';
-                document.getElementById('exportTableButton').style.display = 'none';
-                document.getElementById('printParticipantListButton').style.display = 'none';
-                document.getElementById('updateStatusButton').style.display = 'none';
-
-                const account = msalInstance.getActiveAccount();
-                if (!account) {
-                    throw new Error('Ingen brukerkonto funnet. Logg inn først.');
-                }
-
-                const tokenResponse = await msalInstance.acquireTokenSilent({
-                    scopes: ['Calendars.Read'],
-                    account: account
-                });
-
-                const graphConfig = {
-                    graphMeEndpoint: 'https://graph.microsoft.com/v1.0/me',
-                    graphEventsEndpoint: 'https://graph.microsoft.com/v1.0/me/events'
-                };
-
-                const eventsResponse = await fetch(`${graphConfig.graphEventsEndpoint}?startDateTime=${selectedDate}T00:00:00Z&endDateTime=${selectedDate}T23:59:59Z`, {
-                    headers: {
-                        Authorization: `Bearer ${tokenResponse.accessToken}`
-                    }
-                });
-
-                const events = await eventsResponse.json();
-                console.log('Rådata fra API:', events); // Logg rådata fra API-et
-                console.log('Hendelser fra API:', events.value); // Logg hele hendelseslisten
-
-                if (events.value && events.value.length > 0) {
-                    const filteredEvents = events.value.filter(event => {
-                        let eventStart = new Date(event.start.dateTime || event.start.date);
-                        let eventEnd = new Date(event.end.dateTime || event.end.date);
-
-                        // Juster tidene med to timer
-                        eventStart.setHours(eventStart.getHours() + 2);
-                        eventEnd.setHours(eventEnd.getHours() + 2);
-
-                        console.log('Hendelse:');
-                        console.log('  Tittel:', event.subject || 'Ingen tittel'); // Logg tittel
-                        console.log('  Starttid (rådata):', event.start.dateTime || event.start.date); // Logg rå starttid
-                        console.log('  Sluttid (rådata):', event.end.dateTime || event.end.date); // Logg rå sluttid
-
-                        // Sjekk om hendelsen overlapper med den valgte datoen
-                        const selectedDateStart = new Date(`${selectedDate}T00:00:00`);
-                        const selectedDateEnd = new Date(`${selectedDate}T23:59:59`);
-
-                        const overlaps = eventStart <= selectedDateEnd && eventEnd >= selectedDateStart;
-                        console.log('  Overlapper valgt dato:', overlaps); // Logg om hendelsen overlapper
-
-                        return overlaps;
-                    });
-
-                    if (filteredEvents.length > 0) {
-                        const headers = ['Velg', 'Tittel', 'Dato', 'Starttid', 'Sluttid', 'Sted', 'Arrangør'];
-                        const rows = filteredEvents.map(event => {
-                            let eventStart = new Date(event.start.dateTime || event.start.date);
-                            let eventEnd = new Date(event.end.dateTime || event.end.date);
-
-                            // Juster tidene med to timer
-                            eventStart.setHours(eventStart.getHours() + 2);
-                            eventEnd.setHours(eventEnd.getHours() + 2);
-
-                            const eventStartLocal = eventStart.toLocaleString('no-NO', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone });
-                            const eventEndLocal = eventEnd.toLocaleString('no-NO', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone });
-
-                            return `
-                                <tr>
-                                    <td><input type="radio" name="event" value="${event.id}" /></td>
-                                    <td>${event.subject || 'Ingen tittel'}</td>
-                                    <td>${eventStartLocal.split(', ')[0]}</td>
-                                    <td>${event.isAllDay ? 'Heldag' : eventStartLocal.split(', ')[1]}</td>
-                                    <td>${event.isAllDay ? 'Heldag' : eventEndLocal.split(', ')[1]}</td>
-                                    <td>${event.location?.displayName || 'Ikke spesifisert'}</td>
-                                    <td>${event.organizer.emailAddress.name}</td>
-                                </tr>
-                            `;
-                        }).join('');
-
-                        document.getElementById('eventList').innerHTML = `
-                            <table border="1" style="width: 100%; border-collapse: collapse;">
-                                <thead>
-                                    <tr>${headers.map(header => `<th>${header}</th>`).join('')}</tr>
-                                </thead>
-                                <tbody>${rows}</tbody>
-                            </table>
-                        `;
-                        document.getElementById('eventList').style.display = 'block'; // Ensure the event list is visible
-                    } else {
-                        console.log('Ingen kalenderhendelser funnet for valgt dato.');
-                        document.getElementById('eventList').innerHTML = '<p>Ingen hendelser funnet for valgt dato.</p>';
-                        document.getElementById('eventList').style.display = 'block'; // Show the message
-                    }
-                } else {
-                    console.log('Ingen kalenderhendelser funnet for valgt dato.');
-                }
-            } catch (error) {
-                console.error('Feil ved henting av kalenderhendelser:', error.message);
-            }
-        });
 
         document.getElementById('eventList').addEventListener('change', async () => {
             try {
@@ -751,3 +639,4 @@
     </script>
 </body>
 </html>
+``` 
