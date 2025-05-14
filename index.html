@@ -190,18 +190,22 @@
 
                     if (events.value && events.value.length > 0) {
                         const filteredEvents = events.value.filter(event => {
-                            const eventStart = new Date(event.start.dateTime || event.start.date);
-                            const eventEnd = new Date(event.end.dateTime || event.end.date);
+                            const eventStartUTC = new Date(event.start.dateTime || event.start.date);
+                            const eventEndUTC = new Date(event.end.dateTime || event.end.date);
 
-                            // Juster tidene med to timer
-                            eventStart.setHours(eventStart.getHours() + 2);
-                            eventEnd.setHours(eventEnd.getHours() + 2);
+                            // Convert event times to local time
+                            const eventStartLocal = new Date(eventStartUTC.toLocaleString('en-US', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }));
+                            const eventEndLocal = new Date(eventEndUTC.toLocaleString('en-US', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }));
 
-                            // Sjekk om hendelsen faller innenfor den valgte datoen
+                            console.log('Hendelse start (lokal):', eventStartLocal);
+                            console.log('Hendelse slutt (lokal):', eventEndLocal);
+
+                            // Parse the selected date and create start and end boundaries for the day
                             const selectedDateStart = new Date(`${selectedDate}T00:00:00`);
                             const selectedDateEnd = new Date(`${selectedDate}T23:59:59`);
 
-                            return eventStart >= selectedDateStart && eventEnd <= selectedDateEnd;
+                            // Check if the event overlaps with the selected date
+                            return eventStartLocal <= selectedDateEnd && eventEndLocal >= selectedDateStart;
                         });
 
                         if (filteredEvents.length > 0) {
@@ -639,4 +643,3 @@
     </script>
 </body>
 </html>
-``` 
