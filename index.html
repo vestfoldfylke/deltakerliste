@@ -67,6 +67,8 @@
     </div>
 
     <script>
+        let msalInstance; // Definer msalInstance som en global variabel
+
         async function loadEnvVariables() {
             try {
                 const msalConfig = {
@@ -89,8 +91,7 @@
         }
 
         function initializeApp(msalConfig, graphConfig) {
-            const msalInstance = new msal.PublicClientApplication(msalConfig);
-
+            msalInstance = new msal.PublicClientApplication(msalConfig); // Initialiser msalInstance
             const loginButton = document.getElementById('loginButton');
             loginButton.disabled = true; // Deaktiver knappen til innloggingsstatus er avklart
 
@@ -138,6 +139,94 @@
 
             document.getElementById('logoutButton').addEventListener('click', () => {
                 msalInstance.logoutRedirect();
+            });
+
+            // Aktiver fetchEventsButton etter at msalInstance er initialisert
+            document.getElementById('fetchEventsButton').addEventListener('click', async () => {
+                if (!msalInstance) {
+                    console.error('msalInstance er ikke initialisert.');
+                    return;
+                }
+
+                try {
+                    const selectedDate = document.getElementById('datePicker').value;
+                    if (!selectedDate) {
+                        throw new Error('Velg en dato først.');
+                    }
+
+                    console.log('Valgt dato:', selectedDate); // Logg inputdato
+
+                    // Nullstill visningen
+                    document.getElementById('eventList').innerHTML = '';
+                    document.getElementById('eventList').style.display = 'none';
+                    document.getElementById('meetingDetails').style.display = 'none';
+                    document.getElementById('previewTable').style.display = 'none';
+                    document.getElementById('participantSummary').style.display = 'none';
+                    document.getElementById('exportTableButton').style.display = 'none';
+                    document.getElementById('printParticipantListButton').style.display = 'none';
+                    document.getElementById('updateStatusButton').style.display = 'none';
+
+                    const account = msalInstance.getActiveAccount();
+                    if (!account) {
+                        throw new Error('Ingen brukerkonto funnet. Logg inn først.');
+                    }
+
+                    const tokenResponse = await msalInstance.acquireTokenSilent({
+                        scopes: ['Calendars.Read'],
+                        account: account
+                    });
+
+                    const eventsResponse = await fetch(`${graphConfig.graphEventsEndpoint}?startDateTime=${selectedDate}T00:00:00Z&endDateTime=${selectedDate}T23:59:59Z`, {
+                        headers: {
+                            Authorization: `Bearer ${tokenResponse.accessToken}`
+                        }
+                    });
+
+                    const events = await eventsResponse.json();
+                    console.log('Rådata fra API:', events); // Logg rådata fra API-et
+                    console.log('Hendelser fra API:', events.value); // Logg hele hendelseslisten
+
+                    if (events.value && events.value.length > 0) {
+                        const headers = ['Velg', 'Tittel', 'Dato', 'Starttid', 'Sluttid', 'Sted', 'Arrangør'];
+                        const rows = events.value.map(event => {
+                            let eventStart = new Date(event.start.dateTime || event.start.date);
+                            let eventEnd = new Date(event.end.dateTime || event.end.date);
+
+                            // Juster tidene med to timer
+                            eventStart.setHours(eventStart.getHours() + 2);
+                            eventEnd.setHours(eventEnd.getHours() + 2);
+
+                            const eventStartLocal = eventStart.toLocaleString('no-NO', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone });
+                            const eventEndLocal = eventEnd.toLocaleString('no-NO', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone });
+
+                            return `
+                                <tr>
+                                    <td><input type="radio" name="event" value="${event.id}" /></td>
+                                    <td>${event.subject || 'Ingen tittel'}</td>
+                                    <td>${eventStartLocal.split(', ')[0]}</td>
+                                    <td>${event.isAllDay ? 'Heldag' : eventStartLocal.split(', ')[1]}</td>
+                                    <td>${event.isAllDay ? 'Heldag' : eventEndLocal.split(', ')[1]}</td>
+                                    <td>${event.location?.displayName || 'Ikke spesifisert'}</td>
+                                    <td>${event.organizer.emailAddress.name}</td>
+                                </tr>
+                            `;
+                        }).join('');
+
+                        document.getElementById('eventList').innerHTML = `
+                            <table border="1" style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr>${headers.map(header => `<th>${header}</th>`).join('')}</tr>
+                                </thead>
+                                <tbody>${rows}</tbody>
+                            </table>
+                        `;
+                        document.getElementById('eventList').style.display = 'block';
+                    } else {
+                        console.log('Ingen kalenderhendelser funnet for valgt dato.');
+                    }
+                } catch (error) {
+                    console.error('Feil ved henting av kalenderhendelser:', error.message);
+                }
             });
         }
 
