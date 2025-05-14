@@ -187,40 +187,59 @@
                     console.log('Hendelser fra API:', events.value); // Logg hele hendelseslisten
 
                     if (events.value && events.value.length > 0) {
-                        const headers = ['Velg', 'Tittel', 'Dato', 'Starttid', 'Sluttid', 'Sted', 'Arrangør'];
-                        const rows = events.value.map(event => {
-                            let eventStart = new Date(event.start.dateTime || event.start.date);
-                            let eventEnd = new Date(event.end.dateTime || event.end.date);
+                        const filteredEvents = events.value.filter(event => {
+                            const eventStart = new Date(event.start.dateTime || event.start.date);
+                            const eventEnd = new Date(event.end.dateTime || event.end.date);
 
                             // Juster tidene med to timer
                             eventStart.setHours(eventStart.getHours() + 2);
                             eventEnd.setHours(eventEnd.getHours() + 2);
 
-                            const eventStartLocal = eventStart.toLocaleString('no-NO', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone });
-                            const eventEndLocal = eventEnd.toLocaleString('no-NO', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone });
+                            // Sjekk om hendelsen faller innenfor den valgte datoen
+                            const selectedDateStart = new Date(`${selectedDate}T00:00:00`);
+                            const selectedDateEnd = new Date(`${selectedDate}T23:59:59`);
 
-                            return `
-                                <tr>
-                                    <td><input type="radio" name="event" value="${event.id}" /></td>
-                                    <td>${event.subject || 'Ingen tittel'}</td>
-                                    <td>${eventStartLocal.split(', ')[0]}</td>
-                                    <td>${event.isAllDay ? 'Heldag' : eventStartLocal.split(', ')[1]}</td>
-                                    <td>${event.isAllDay ? 'Heldag' : eventEndLocal.split(', ')[1]}</td>
-                                    <td>${event.location?.displayName || 'Ikke spesifisert'}</td>
-                                    <td>${event.organizer.emailAddress.name}</td>
-                                </tr>
+                            return eventStart >= selectedDateStart && eventEnd <= selectedDateEnd;
+                        });
+
+                        if (filteredEvents.length > 0) {
+                            const headers = ['Velg', 'Tittel', 'Dato', 'Starttid', 'Sluttid', 'Sted', 'Arrangør'];
+                            const rows = filteredEvents.map(event => {
+                                const eventStart = new Date(event.start.dateTime || event.start.date);
+                                const eventEnd = new Date(event.end.dateTime || event.end.date);
+
+                                // Juster tidene med to timer
+                                eventStart.setHours(eventStart.getHours() + 2);
+                                eventEnd.setHours(eventEnd.getHours() + 2);
+
+                                const eventStartLocal = eventStart.toLocaleString('no-NO', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone });
+                                const eventEndLocal = eventEnd.toLocaleString('no-NO', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone });
+
+                                return `
+                                    <tr>
+                                        <td><input type="radio" name="event" value="${event.id}" /></td>
+                                        <td>${event.subject || 'Ingen tittel'}</td>
+                                        <td>${eventStartLocal.split(', ')[0]}</td>
+                                        <td>${event.isAllDay ? 'Heldag' : eventStartLocal.split(', ')[1]}</td>
+                                        <td>${event.isAllDay ? 'Heldag' : eventEndLocal.split(', ')[1]}</td>
+                                        <td>${event.location?.displayName || 'Ikke spesifisert'}</td>
+                                        <td>${event.organizer.emailAddress.name}</td>
+                                    </tr>
+                                `;
+                            }).join('');
+
+                            document.getElementById('eventList').innerHTML = `
+                                <table border="1" style="width: 100%; border-collapse: collapse;">
+                                    <thead>
+                                        <tr>${headers.map(header => `<th>${header}</th>`).join('')}</tr>
+                                    </thead>
+                                    <tbody>${rows}</tbody>
+                                </table>
                             `;
-                        }).join('');
-
-                        document.getElementById('eventList').innerHTML = `
-                            <table border="1" style="width: 100%; border-collapse: collapse;">
-                                <thead>
-                                    <tr>${headers.map(header => `<th>${header}</th>`).join('')}</tr>
-                                </thead>
-                                <tbody>${rows}</tbody>
-                            </table>
-                        `;
-                        document.getElementById('eventList').style.display = 'block';
+                            document.getElementById('eventList').style.display = 'block';
+                        } else {
+                            console.log('Ingen kalenderhendelser funnet for valgt dato.');
+                        }
                     } else {
                         console.log('Ingen kalenderhendelser funnet for valgt dato.');
                     }
