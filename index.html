@@ -519,124 +519,89 @@ redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
                     throw new Error('Velg en dato først.');
                 }
 
-                console.log('Valgt dato:', selectedDate);
-
-                // Reset visibility of buttons and other elements
-                document.querySelector('.button-container').classList.remove('visible');
-                document.getElementById('exportTableButton').style.display = 'none';
-                document.getElementById('printParticipantListButton').style.display = 'none';
-                document.getElementById('updateStatusButton').style.display = 'none';
-
-                // Format the selected date to local time range
                 const selectedDateStart = new Date(selectedDate);
                 selectedDateStart.setHours(0, 0, 0, 0);
                 const selectedDateEnd = new Date(selectedDate);
                 selectedDateEnd.setHours(23, 59, 59, 999);
 
-                console.log('Startdato og tid (lokal):', selectedDateStart);
-                console.log('Sluttdato og tid (lokal):', selectedDateEnd);
-
-                // Nullstill visningen
-                document.getElementById('eventList').innerHTML = '';
-                document.getElementById('eventList').style.display = 'none';
-                document.getElementById('meetingDetails').style.display = 'none';
-                document.getElementById('previewTable').style.display = 'none';
-                document.getElementById('participantSummary').style.display = 'none';
-
-                const account = msalInstance.getActiveAccount();
-                if (!account) {
-                    throw new Error('Ingen brukerkonto funnet. Logg inn først.');
-                }
-
-                const tokenResponse = await msalInstance.acquireTokenSilent({
-                    scopes: ['Calendars.Read'],
-                    account: account
-                });
-
-                const graphConfig = {
-                    graphMeEndpoint: 'https://graph.microsoft.com/v1.0/me',
-                    graphEventsEndpoint: 'https://graph.microsoft.com/v1.0/me/events'
-                };
+                console.log('Valgt dato:', selectedDate);
+                console.log('Startdato og tid (ISO):', selectedDateStart.toISOString());
+                console.log('Sluttdato og tid (ISO):', selectedDateEnd.toISOString());
 
                 let events = [];
                 let nextLink = `${graphConfig.graphEventsEndpoint}?$top=100`;
 
-                // Hent alle sider med hendelser
                 while (nextLink) {
                     const eventsResponse = await fetch(nextLink, {
-                        headers: {
-                            Authorization: `Bearer ${tokenResponse.accessToken}`
-                        }
+                        headers: { Authorization: `Bearer ${tokenResponse.accessToken}` }
                     });
-
                     const eventsData = await eventsResponse.json();
                     events = events.concat(eventsData.value);
-                    nextLink = eventsData['@odata.nextLink'] || null; // Håndter paginering
+                    nextLink = eventsData['@odata.nextLink'] || null;
                 }
 
-                console.log('Alle hendelser fra API:', events);
+                console.log('Rådata fra API:', events);
 
-                if (events.length > 0) {
-                    const filteredEvents = events.filter(event => {
-                        const eventStart = event.start?.dateTime ? new Date(event.start.dateTime) : null;
-                        const eventEnd = event.end?.dateTime ? new Date(event.end.dateTime) : null;
+                const filteredEvents = events.filter(event => {
+                    const eventStart = event.start?.dateTime ? new Date(event.start.dateTime) : null;
+                    const eventEnd = event.end?.dateTime ? new Date(event.end.dateTime) : null;
 
-                        // Håndter hendelser uten start- eller sluttdato
-                        if (!eventStart || !eventEnd) {
-                            console.warn('Hendelse uten start- eller sluttdato:', event);
-                            return false;
-                        }
-
-                        // Sjekk om hendelsen overlapper med den valgte datoen
-                        return eventEnd >= selectedDateStart && eventStart <= selectedDateEnd;
-                    });
-
-                    console.log('Filtrerte hendelser:', filteredEvents);
-
-                    if (filteredEvents.length > 0) {
-                        const headers = ['Velg', 'Tittel', 'Dato', 'Starttid', 'Sluttid', 'Sted', 'Arrangør'];
-                        const rows = filteredEvents.map(event => {
-                            const eventStart = new Date(event.start.dateTime || event.start.date);
-                            const eventEnd = new Date(event.end.dateTime || event.end.date);
-
-                            console.log('Hendelsesdetaljer:', {
-                                Tittel: event.subject,
-                                Start: eventStart,
-                                Slutt: eventEnd,
-                                Sted: event.location?.displayName,
-                                Arrangør: event.organizer.emailAddress.name
-                            });
-
-                            return `
-                                <tr>
-                                    <td><input type="radio" name="event" value="${event.id}" /></td>
-                                    <td>${event.subject || 'Ingen tittel'}</td>
-                                    <td>${eventStart.toLocaleDateString('no-NO')}</td>
-                                    <td>${event.isAllDay ? 'Heldag' : eventStart.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
-                                    <td>${event.isAllDay ? 'Heldag' : eventEnd.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
-                                    <td>${event.location?.displayName || 'Ikke spesifisert'}</td>
-                                    <td>${event.organizer.emailAddress.name}</td>
-                                </tr>
-                            `;
-                        }).join('');
-
-                        document.getElementById('eventList').innerHTML = `
-                            <table border="1" style="width: 100%; border-collapse: collapse;">
-                                <thead>
-                                    <tr>${headers.map(header => `<th>${header}</th>`).join('')}</tr>
-                                </thead>
-                                <tbody>${rows}</tbody>
-                            </table>
-                        `;
-                        document.getElementById('eventList').style.display = 'block';
-                    } else {
-                        console.log('Ingen kalenderhendelser funnet for valgt dato.');
-                        document.getElementById('eventList').innerHTML = '<p>Ingen hendelser funnet for valgt dato.</p>';
-                        document.getElementById('eventList').style.display = 'block';
+                    if (!eventStart || !eventEnd) {
+                        console.warn('Hendelse uten start- eller sluttdato:', event);
+                        return false;
                     }
-                } else {
-                    console.log('Ingen kalenderhendelser funnet for valgt dato.');
+
+                    const overlaps = eventEnd >= selectedDateStart && eventStart <= selectedDateEnd;
+                    if (!overlaps) {
+                        console.log('Ekskludert hendelse:', {
+                            Tittel: event.subject,
+                            Start: eventStart,
+                            Slutt: eventEnd
+                        });
+                    }
+                    return overlaps;
+                });
+
+                console.log('Filtrerte hendelser:', filteredEvents);
+
+                if (filteredEvents.length === 0) {
                     document.getElementById('eventList').innerHTML = '<p>Ingen hendelser funnet for valgt dato.</p>';
+                    document.getElementById('eventList').style.display = 'block';
+                } else {
+                    const headers = ['Velg', 'Tittel', 'Dato', 'Starttid', 'Sluttid', 'Sted', 'Arrangør'];
+                    const rows = filteredEvents.map(event => {
+                        const eventStart = new Date(event.start.dateTime || event.start.date);
+                        const eventEnd = new Date(event.end.dateTime || event.end.date);
+
+                        console.log('Hendelsesdetaljer:', {
+                            Tittel: event.subject,
+                            Start: eventStart,
+                            Slutt: eventEnd,
+                            Sted: event.location?.displayName,
+                            Arrangør: event.organizer.emailAddress.name
+                        });
+
+                        return `
+                            <tr>
+                                <td><input type="radio" name="event" value="${event.id}" /></td>
+                                <td>${event.subject || 'Ingen tittel'}</td>
+                                <td>${eventStart.toLocaleDateString('no-NO')}</td>
+                                <td>${event.isAllDay ? 'Heldag' : eventStart.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+                                <td>${event.isAllDay ? 'Heldag' : eventEnd.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+                                <td>${event.location?.displayName || 'Ikke spesifisert'}</td>
+                                <td>${event.organizer.emailAddress.name}</td>
+                            </tr>
+                        `;
+                    }).join('');
+
+                    document.getElementById('eventList').innerHTML = `
+                        <table border="1" style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr>${headers.map(header => `<th>${header}</th>`).join('')}</tr>
+                            </thead>
+                            <tbody>${rows}</tbody>
+                        </table>
+                    `;
                     document.getElementById('eventList').style.display = 'block';
                 }
             } catch (error) {
@@ -732,4 +697,3 @@ redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
     </script>
 </body>
 </html>
-``` 
