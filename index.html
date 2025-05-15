@@ -46,7 +46,7 @@
         </div>
     </header>
     <button id="loginButton">Logg inn med Microsoft</button>
-    <h1 style="text-align: left; margin-top: 2rem;">Velg dato</h1>
+    <h1 id="datePickerLabel" style="text-align: left; margin-top: 2rem; display: none;">Velg dato</h1>
     <input type="date" id="datePicker" style="display: none; margin-bottom: 1rem;" />
     <button id="fetchEventsButton" style="display: none;">Hent kalenderhendelser</button>
     <div id="eventList" style="display: none;"></div> <!-- Endret fra select til div -->
@@ -176,6 +176,7 @@
                 document.getElementById('userName').textContent = activeAccount.username; // Oppdater brukernavn
                 document.getElementById('fetchEventsButton').style.display = 'inline-block';
                 document.getElementById('datePicker').style.display = 'inline-block';
+                document.getElementById('datePickerLabel').style.display = 'block'; // Show "Velg dato" text
                 document.getElementById('logoutButton').style.display = 'inline-block'; // Vis logg ut-knappen
                 document.getElementById('loginButton').style.display = 'none'; // Skjul logg inn-knappen
             }
