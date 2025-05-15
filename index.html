@@ -511,8 +511,8 @@ redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
                 document.getElementById('updateStatusButton').style.display = 'none';
 
                 // Format the selected date to ISO 8601 format
-                const startDateTime = new Date(`${selectedDate}T00:00:00`).toISOString();
-                const endDateTime = new Date(`${selectedDate}T23:59:59`).toISOString();
+                const startDateTime = `${selectedDate}T00:00:00Z`; // Ensure UTC format
+                const endDateTime = `${selectedDate}T23:59:59Z`; // Ensure UTC format
 
                 console.log('Startdato og tid (ISO):', startDateTime);
                 console.log('Sluttdato og tid (ISO):', endDateTime);
@@ -550,67 +550,37 @@ redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
                 console.log('Hendelser fra API:', events.value); // Logg hele hendelseslisten
 
                 if (events.value && events.value.length > 0) {
-                    const filteredEvents = events.value.filter(event => {
-                        const eventStartUTC = new Date(event.start.dateTime || event.start.date);
-                        const eventEndUTC = new Date(event.end.dateTime || event.end.date);
+                    const headers = ['Velg', 'Tittel', 'Dato', 'Starttid', 'Sluttid', 'Sted', 'Arrangør'];
+                    const rows = events.value.map(event => {
+                        const eventStart = new Date(event.start.dateTime || event.start.date);
+                        const eventEnd = new Date(event.end.dateTime || event.end.date);
 
-                        // Convert event times to local time
-                        const eventStartLocal = new Date(eventStartUTC.toLocaleString('en-US', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }));
-                        const eventEndLocal = new Date(eventEndUTC.toLocaleString('en-US', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }));
-
-                        console.log('Hendelse start (lokal):', eventStartLocal);
-                        console.log('Hendelse slutt (lokal):', eventEndLocal);
-
-                        // Parse the selected date and create start and end boundaries for the day
-                        const selectedDateStart = new Date(`${selectedDate}T00:00:00`);
-                        const selectedDateEnd = new Date(`${selectedDate}T23:59:59`);
-
-                        // Check if the event overlaps with the selected date
-                        return eventStartLocal <= selectedDateEnd && eventEndLocal >= selectedDateStart;
-                    });
-
-                    if (filteredEvents.length > 0) {
-                        const headers = ['Velg', 'Tittel', 'Dato', 'Starttid', 'Sluttid', 'Sted', 'Arrangør'];
-                        const rows = filteredEvents.map(event => {
-                            const eventStart = new Date(event.start.dateTime || event.start.date);
-                            const eventEnd = new Date(event.end.dateTime || event.end.date);
-
-                            // Juster tidene med to timer
-                            eventStart.setHours(eventStart.getHours() + 2);
-                            eventEnd.setHours(eventEnd.getHours() + 2);
-
-                            const eventStartLocal = eventStart.toLocaleString('no-NO', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone });
-                            const eventEndLocal = eventEnd.toLocaleString('no-NO', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone });
-
-                            return `
-                                <tr>
-                                    <td><input type="radio" name="event" value="${event.id}" /></td>
-                                    <td>${event.subject || 'Ingen tittel'}</td>
-                                    <td>${eventStartLocal.split(', ')[0]}</td>
-                                    <td>${event.isAllDay ? 'Heldag' : eventStartLocal.split(', ')[1]}</td>
-                                    <td>${event.isAllDay ? 'Heldag' : eventEndLocal.split(', ')[1]}</td>
-                                    <td>${event.location?.displayName || 'Ikke spesifisert'}</td>
-                                    <td>${event.organizer.emailAddress.name}</td>
-                                </tr>
-                            `;
-                        }).join('');
-
-                        document.getElementById('eventList').innerHTML = `
-                            <table border="1" style="width: 100%; border-collapse: collapse;">
-                                <thead>
-                                    <tr>${headers.map(header => `<th>${header}</th>`).join('')}</tr>
-                                </thead>
-                                <tbody>${rows}</tbody>
-                            </table>
+                        return `
+                            <tr>
+                                <td><input type="radio" name="event" value="${event.id}" /></td>
+                                <td>${event.subject || 'Ingen tittel'}</td>
+                                <td>${eventStart.toLocaleDateString('no-NO')}</td>
+                                <td>${event.isAllDay ? 'Heldag' : eventStart.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+                                <td>${event.isAllDay ? 'Heldag' : eventEnd.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+                                <td>${event.location?.displayName || 'Ikke spesifisert'}</td>
+                                <td>${event.organizer.emailAddress.name}</td>
+                            </tr>
                         `;
-                        document.getElementById('eventList').style.display = 'block'; // Ensure the event list is visible
-                    } else {
-                        console.log('Ingen kalenderhendelser funnet for valgt dato.');
-                        document.getElementById('eventList').innerHTML = '<p>Ingen hendelser funnet for valgt dato.</p>';
-                        document.getElementById('eventList').style.display = 'block'; // Show the message
-                    }
+                    }).join('');
+
+                    document.getElementById('eventList').innerHTML = `
+                        <table border="1" style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr>${headers.map(header => `<th>${header}</th>`).join('')}</tr>
+                            </thead>
+                            <tbody>${rows}</tbody>
+                        </table>
+                    `;
+                    document.getElementById('eventList').style.display = 'block'; // Ensure the event list is visible
                 } else {
                     console.log('Ingen kalenderhendelser funnet for valgt dato.');
+                    document.getElementById('eventList').innerHTML = '<p>Ingen hendelser funnet for valgt dato.</p>';
+                    document.getElementById('eventList').style.display = 'block'; // Show the message
                 }
             } catch (error) {
                 console.error('Feil ved henting av kalenderhendelser:', error.message);
@@ -701,3 +671,4 @@ redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
     </script>
 </body>
 </html>
+`
