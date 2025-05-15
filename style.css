@@ -25,6 +25,9 @@ body {
     color: var(--font-color);
     padding-top: 70px; /* Ensure enough space for the header */
     padding-left: 10px; /* Adjust padding for logo alignment */
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Center horizontally */
 }
 
 /* Input and textarea */
@@ -156,6 +159,13 @@ a:hover {
     border: none;
     cursor: pointer;
     text-align: right;
+}
+
+/* Login button */
+#loginButton {
+    display: block;
+    margin: 0 auto; /* Center horizontally */
+    text-align: center;
 }
 
 /* Header styles */
