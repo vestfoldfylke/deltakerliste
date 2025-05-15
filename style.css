@@ -136,7 +136,7 @@ a:hover {
     border-radius: 0.5rem;
     padding: var(--spacing);
     margin-bottom: var(--spacing);
-    width: 60%; /* Match the width of #eventList */
+    width: 40%; /* Match the width of #eventList */
     box-sizing: border-box; /* Include padding and border in the width */
 }
 
