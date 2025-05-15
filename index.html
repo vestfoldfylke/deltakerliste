@@ -599,6 +599,14 @@ redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
                             const eventStart = new Date(event.start.dateTime || event.start.date);
                             const eventEnd = new Date(event.end.dateTime || event.end.date);
 
+                            console.log('Hendelsesdetaljer:', {
+                                Tittel: event.subject,
+                                Start: eventStart,
+                                Slutt: eventEnd,
+                                Sted: event.location?.displayName,
+                                Arrangør: event.organizer.emailAddress.name
+                            });
+
                             return `
                                 <tr>
                                     <td><input type="radio" name="event" value="${event.id}" /></td>
@@ -724,3 +732,4 @@ redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
     </script>
 </body>
 </html>
+``` 
