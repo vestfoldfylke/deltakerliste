@@ -519,7 +519,7 @@ redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
                     throw new Error('Velg en dato først.');
                 }
 
-                console.log('Valgt dato:', selectedDate); // Logg inputdato
+                console.log('Valgt dato:', selectedDate);
 
                 // Reset visibility of buttons and other elements
                 document.querySelector('.button-container').classList.remove('visible');
@@ -558,17 +558,26 @@ redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
                     graphEventsEndpoint: 'https://graph.microsoft.com/v1.0/me/events'
                 };
 
-                const eventsResponse = await fetch(`${graphConfig.graphEventsEndpoint}`, {
-                    headers: {
-                        Authorization: `Bearer ${tokenResponse.accessToken}`
-                    }
-                });
+                let events = [];
+                let nextLink = `${graphConfig.graphEventsEndpoint}?$top=100`;
 
-                const events = await eventsResponse.json();
-                console.log('Rådata fra API:', events); // Logg rådata fra API-et
+                // Hent alle sider med hendelser
+                while (nextLink) {
+                    const eventsResponse = await fetch(nextLink, {
+                        headers: {
+                            Authorization: `Bearer ${tokenResponse.accessToken}`
+                        }
+                    });
 
-                if (events.value && events.value.length > 0) {
-                    const filteredEvents = events.value.filter(event => {
+                    const eventsData = await eventsResponse.json();
+                    events = events.concat(eventsData.value);
+                    nextLink = eventsData['@odata.nextLink'] || null; // Håndter paginering
+                }
+
+                console.log('Alle hendelser fra API:', events);
+
+                if (events.length > 0) {
+                    const filteredEvents = events.filter(event => {
                         const eventStart = event.start?.dateTime ? new Date(event.start.dateTime) : null;
                         const eventEnd = event.end?.dateTime ? new Date(event.end.dateTime) : null;
 
@@ -582,7 +591,7 @@ redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
                         return eventEnd >= selectedDateStart && eventStart <= selectedDateEnd;
                     });
 
-                    console.log('Filtrerte hendelser:', filteredEvents); // Logg filtrerte hendelser
+                    console.log('Filtrerte hendelser:', filteredEvents);
 
                     if (filteredEvents.length > 0) {
                         const headers = ['Velg', 'Tittel', 'Dato', 'Starttid', 'Sluttid', 'Sted', 'Arrangør'];
@@ -611,16 +620,16 @@ redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
                                 <tbody>${rows}</tbody>
                             </table>
                         `;
-                        document.getElementById('eventList').style.display = 'block'; // Ensure the event list is visible
+                        document.getElementById('eventList').style.display = 'block';
                     } else {
                         console.log('Ingen kalenderhendelser funnet for valgt dato.');
                         document.getElementById('eventList').innerHTML = '<p>Ingen hendelser funnet for valgt dato.</p>';
-                        document.getElementById('eventList').style.display = 'block'; // Show the message
+                        document.getElementById('eventList').style.display = 'block';
                     }
                 } else {
                     console.log('Ingen kalenderhendelser funnet for valgt dato.');
                     document.getElementById('eventList').innerHTML = '<p>Ingen hendelser funnet for valgt dato.</p>';
-                    document.getElementById('eventList').style.display = 'block'; // Show the message
+                    document.getElementById('eventList').style.display = 'block';
                 }
             } catch (error) {
                 console.error('Feil ved henting av kalenderhendelser:', error.message);
