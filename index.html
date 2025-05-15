@@ -69,6 +69,7 @@
         <p>Antall akseptert: <span id="acceptedCount">0</span></p>
         <p>Antall ikke akseptert: <span id="notAcceptedCount">0</span></p>
     </div>
+    <div id="statusMessage" style="display: none; color: red; text-align: center; margin-top: 1rem;"></div>
 
     <script>
         let msalInstance; // Definer msalInstance som en global variabel
@@ -262,10 +263,14 @@ redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
                     mobile: row.cells[4].textContent.trim()     // Mobile in the fifth cell
                 }));
 
+            const statusMessage = document.getElementById('statusMessage');
             if (tableRows.length === 0) {
-                console.log('Ingen aksepterte deltakere å skrive ut.');
+                statusMessage.textContent = 'Ingen deltakere valgt for utskrift.';
+                statusMessage.style.display = 'block';
                 return;
             }
+
+            statusMessage.style.display = 'none'; // Hide the status message if participants are selected
 
             const { jsPDF } = window.jspdf; // Ensure jsPDF is correctly referenced
             const doc = new jsPDF();
@@ -592,10 +597,14 @@ redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
                 .filter(row => row.querySelector('.accepted-checkbox').checked) // Dynamically filter based on "Akseptert" checkbox
                 .map(row => Array.from(row.cells).slice(1).map(cell => cell.textContent.trim())); // Exclude the first cell (Akseptert)
 
+            const statusMessage = document.getElementById('statusMessage');
             if (tableRows.length === 0) {
-                console.log('Ingen data å eksportere.');
+                statusMessage.textContent = 'Ingen deltakere valgt for eksport.';
+                statusMessage.style.display = 'block';
                 return;
             }
+
+            statusMessage.style.display = 'none'; // Hide the status message if participants are selected
 
             const headers = Array.from(document.querySelectorAll('#dataTable thead th'))
                 .slice(1) // Exclude the first column (Akseptert)
@@ -671,4 +680,3 @@ redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
     </script>
 </body>
 </html>
-`
