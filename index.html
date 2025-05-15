@@ -58,7 +58,11 @@
         <p><strong>Sluttid:</strong> <span id="meetingEndTime">Ukjent sluttid</span></p>
         <p><strong>Sted:</strong> <span id="meetingLocation">Ikke spesifisert</span></p>
         <p><strong>Arrangør:</strong> <span id="meetingOrganizer">Ikke spesifisert</span></p>
+        <p><strong>Inviterte:</strong> <span id="totalCount">0</span></p>
+        <p><strong>Akseptert:</strong> <span id="acceptedCount">0</span></p>
+        <p><strong>Ikke akseptert:</strong> <span id="notAcceptedCount">0</span></p>
     </div>
+    <div id="statusMessage" style="display: none; color: red; text-align: center; margin-top: 1rem;"></div>
     <div class="button-container" style="display: none;">
         <button id="exportTableButton">Eksporter tabell til Excel</button>
         <button id="printParticipantListButton">Skriv ut deltakerliste</button>
@@ -66,10 +70,8 @@
     </div>
     <div id="previewTable" style="display: none; margin-top: 1rem;"></div> <!-- Forhåndsvisningstabell -->
     <div id="participantSummary" style="display: none; margin-top: 1rem; font-weight: bold;">
-        <p>Antall akseptert: <span id="acceptedCount">0</span></p>
-        <p>Antall ikke akseptert: <span id="notAcceptedCount">0</span></p>
+
     </div>
-    <div id="statusMessage" style="display: none; color: red; text-align: center; margin-top: 1rem;"></div>
 
     <script>
         let msalInstance; // Definer msalInstance som en global variabel
