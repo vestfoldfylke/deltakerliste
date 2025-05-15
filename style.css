@@ -55,7 +55,10 @@ input[type="text"] {
 }
 
 input[type="date"] {
+    width: auto; /* Adjust width to fit content */
+    padding: var(--spacing-small);
     margin-bottom: 1rem; /* Add spacing below date picker */
+    cursor: pointer; /* Make the entire field clickable */
 }
 
 input:hover, textarea:hover {
