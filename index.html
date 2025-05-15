@@ -528,7 +528,12 @@ redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
                 console.log('Startdato og tid (ISO):', selectedDateStart.toISOString());
                 console.log('Sluttdato og tid (ISO):', selectedDateEnd.toISOString());
 
-                // Definer graphConfig her for å unngå feilen
+                const account = msalInstance.getActiveAccount();
+                const tokenResponse = await msalInstance.acquireTokenSilent({
+                    scopes: ['Calendars.Read'],
+                    account: account
+                });
+
                 const graphConfig = {
                     graphMeEndpoint: 'https://graph.microsoft.com/v1.0/me',
                     graphEventsEndpoint: 'https://graph.microsoft.com/v1.0/me/events'
@@ -703,3 +708,4 @@ redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
     </script>
 </body>
 </html>
+`
