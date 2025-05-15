@@ -499,6 +499,11 @@ redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
             document.getElementById('meetingEndTime').textContent = eventEnd.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             document.getElementById('meetingLocation').textContent = event.location?.displayName || 'Ikke spesifisert';
             document.getElementById('meetingOrganizer').textContent = event.organizer.emailAddress.name || 'Ikke spesifisert';
+
+            // Update total count of invited participants
+            const totalCount = event.attendees?.length || 0;
+            document.getElementById('totalCount').textContent = totalCount;
+
             meetingDetails.style.display = 'block';
         }
 
@@ -682,3 +687,4 @@ redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
     </script>
 </body>
 </html>
+`
