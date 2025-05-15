@@ -136,6 +136,8 @@ a:hover {
     border-radius: 0.5rem;
     padding: var(--spacing);
     margin-bottom: var(--spacing);
+    width: 100%; /* Match the width of #eventList */
+    box-sizing: border-box; /* Include padding and border in the width */
 }
 
 #meetingDetails h2 {
