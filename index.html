@@ -676,6 +676,11 @@ redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
             document.getElementById('exportTableButton').style.display = 'none';
             document.getElementById('printParticipantListButton').style.display = 'none';
             document.getElementById('updateStatusButton').style.display = 'none';
+
+            // Allow any date to be selected in the date picker
+            const datePicker = document.getElementById('datePicker');
+            datePicker.removeAttribute('min'); // Remove any minimum date restriction
+            datePicker.removeAttribute('max'); // Remove any maximum date restriction
         });
 
         document.getElementById('datePicker').addEventListener('change', () => {
@@ -696,4 +701,3 @@ redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
     </script>
 </body>
 </html>
-`
