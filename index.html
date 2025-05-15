@@ -234,8 +234,11 @@ redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
                     graphEventsEndpoint: 'https://graph.microsoft.com/v1.0/me/events'
                 };
 
+                const filterQuery = `$filter=start/dateTime ge '${selectedDateStart.toISOString()}' and start/dateTime lt '${selectedDateEnd.toISOString()}'`;
+                const eventsEndpoint = `${graphConfig.graphEventsEndpoint}?${filterQuery}&$top=100`;
+
                 let events = [];
-                let nextLink = `${graphConfig.graphEventsEndpoint}?$top=100`;
+                let nextLink = eventsEndpoint;
 
                 while (nextLink) {
                     const eventsData = await fetchWithRetry(nextLink, {
@@ -245,36 +248,14 @@ redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
                     nextLink = eventsData['@odata.nextLink'] || null;
                 }
 
-                console.log('Rådata fra API:', events);
+                console.log('Filtrerte hendelser:', events);
 
-                const filteredEvents = events.filter(event => {
-                    const eventStart = event.start?.dateTime ? new Date(event.start.dateTime) : null;
-                    const eventEnd = event.end?.dateTime ? new Date(event.end.dateTime) : null;
-
-                    if (!eventStart || !eventEnd) {
-                        console.warn('Hendelse uten start- eller sluttdato:', event);
-                        return false;
-                    }
-
-                    const overlaps = eventEnd >= selectedDateStart && eventStart <= selectedDateEnd;
-                    if (!overlaps) {
-                        console.log('Ekskludert hendelse:', {
-                            Tittel: event.subject,
-                            Start: eventStart,
-                            Slutt: eventEnd
-                        });
-                    }
-                    return overlaps;
-                });
-
-                console.log('Filtrerte hendelser:', filteredEvents);
-
-                if (filteredEvents.length === 0) {
+                if (events.length === 0) {
                     document.getElementById('eventList').innerHTML = '<p>Ingen hendelser funnet for valgt dato.</p>';
                     document.getElementById('eventList').style.display = 'block';
                 } else {
                     const headers = ['Velg', 'Tittel', 'Dato', 'Starttid', 'Sluttid', 'Sted', 'Arrangør'];
-                    const rows = filteredEvents.map(event => {
+                    const rows = events.map(event => {
                         const eventStart = new Date(event.start.dateTime || event.start.date);
                         const eventEnd = new Date(event.end.dateTime || event.end.date);
 
@@ -731,3 +712,4 @@ redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
     </script>
 </body>
 </html>
+`
