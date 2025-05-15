@@ -245,6 +245,23 @@ a:hover {
     margin-bottom: 0.5rem; /* Add spacing below the name */
 }
 
+/* Button alignment */
+#exportTableButton,
+#printParticipantListButton,
+#updateStatusButton {
+    display: inline-block; /* Ensure buttons are inline when visible */
+}
+
+.button-container {
+    display: none; /* Hidden by default */
+    gap: var(--spacing-small); /* Add spacing between buttons */
+    margin-top: var(--spacing); /* Add spacing above the container */
+}
+
+.button-container.visible {
+    display: flex; /* Show when the class is added */
+}
+
 /* Responsivitet */
 @media (max-width: 900px) {
     .header {

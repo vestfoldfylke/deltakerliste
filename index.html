@@ -59,9 +59,11 @@
         <p><strong>Sted:</strong> <span id="meetingLocation">Ikke spesifisert</span></p>
         <p><strong>Arrangør:</strong> <span id="meetingOrganizer">Ikke spesifisert</span></p>
     </div>
-    <button id="exportTableButton" style="display: none;">Eksporter tabell til Excel</button> <!-- Ny knapp -->
-    <button id="printParticipantListButton" style="display: none;">Skriv ut deltakerliste</button> <!-- Ny knapp -->
-    <button id="updateStatusButton" style="display: none;">Oppdater status</button> <!-- Ny knapp -->
+    <div class="button-container" style="display: none;">
+        <button id="exportTableButton">Eksporter tabell til Excel</button>
+        <button id="printParticipantListButton">Skriv ut deltakerliste</button>
+        <button id="updateStatusButton">Oppdater status</button>
+    </div>
     <div id="previewTable" style="display: none; margin-top: 1rem;"></div> <!-- Forhåndsvisningstabell -->
     <div id="participantSummary" style="display: none; margin-top: 1rem; font-weight: bold;">
         <p>Antall akseptert: <span id="acceptedCount">0</span></p>
@@ -75,9 +77,9 @@
             try {
                 const msalConfig = {
                     auth: {
-                        clientId: '160b2de0-4af8-4b98-ae4e-9ce17b3793e4', // Endre til din egen verdi
-                        authority: 'https://login.microsoftonline.com/0a8a3b9a-8dcd-4ebc-9305-f971454d49bb',    // Endre til din egen verdi
-                        redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
+                        clientId: 'd9334c65-d5ca-47eb-b2e3-4ffa9c0b3c50', // Endre til din egen verdi
+authority: 'https://login.microsoftonline.com/5af31661-4b83-4681-886c-caf3f962b821',    // Endre til din egen verdi
+redirectUri: 'http://localhost:5500' // Endre til din egen URL
                     }
                 };
 
@@ -111,7 +113,7 @@
                     handlePostLogin(msalInstance, graphConfig);
                 } else {
                     console.warn('Ingen aktiv konto funnet. Brukeren må logge inn manuelt.');
-                    loginButton.style.display = 'inline-block'; // Vis logg inn-knappen
+                    loginButton.style.display = 'block'; // Vis logg inn-knappen
                 }
 
                 loginButton.disabled = false; // Aktiver knappen etter at status er avklart
@@ -119,15 +121,6 @@
                 console.error('Feil ved håndtering av omdirigering:', error);
                 loginButton.disabled = false; // Aktiver knappen selv om det oppstår en feil
             });
-
-            // Check for an active account before attempting SSO
-            const activeAccount = msalInstance.getActiveAccount();
-            if (activeAccount) {
-                console.log('Aktiv konto funnet:', activeAccount);
-                handlePostLogin(msalInstance, graphConfig);
-                loginButton.disabled = false; // Aktiver knappen
-                return;
-            }
 
             // Attempt SSO with loginHint if no active account is found
             const accounts = msalInstance.getAllAccounts();
@@ -151,7 +144,7 @@
                     });
                 } else {
                     console.error('SSO-feil: Brukeren må logge inn manuelt.');
-                    loginButton.style.display = 'inline-block'; // Vis logg inn-knappen
+                    loginButton.style.display = 'block'; // Vis logg inn-knappen
                     loginButton.disabled = false; // Aktiver logg inn-knappen
                 }
             });
@@ -160,7 +153,6 @@
                 console.log('Starter manuell innlogging...');
                 msalInstance.loginRedirect({
                     scopes: ['User.Read', 'Calendars.Read'], // Be om nødvendige tillatelser
-                    loginHint: loginHint // Bruk loginHint for å unngå kontovalg
                 });
             });
 
@@ -179,6 +171,7 @@
                 document.getElementById('datePickerLabel').style.display = 'block'; // Show "Velg dato" text
                 document.getElementById('logoutButton').style.display = 'inline-block'; // Vis logg ut-knappen
                 document.getElementById('loginButton').style.display = 'none'; // Skjul logg inn-knappen
+                document.querySelector('.button-container').style.display = 'flex'; // Show button container
             }
         }
 
@@ -211,10 +204,11 @@
                 displayMeetingDetails(event); // Display meeting details
                 const meetingData = parseGraphEvents([event]);
 
-                // Vis forhåndsvisning av tabellen
+                // Show the preview table and buttons
                 displayPreviewTable(meetingData);
-
-                // Vis Oppdater status-knappen
+                document.querySelector('.button-container').classList.add('visible'); // Show button container
+                document.getElementById('exportTableButton').style.display = 'inline-block';
+                document.getElementById('printParticipantListButton').style.display = 'inline-block';
                 document.getElementById('updateStatusButton').style.display = 'inline-block';
             } catch (error) {
                 console.log(`Feil ved henting av kalenderhendelse: ${error.message}`);
@@ -264,7 +258,8 @@
                 .map(row => ({
                     firstName: row.cells[1].textContent.trim(), // First name in the second cell
                     lastName: row.cells[2].textContent.trim(),  // Last name in the third cell
-                    email: row.cells[10].textContent.trim()     // Email in the eleventh cell
+                    email: row.cells[10].textContent.trim(),    // Email in the eleventh cell
+                    mobile: row.cells[4].textContent.trim()     // Mobile in the fifth cell
                 }));
 
             if (tableRows.length === 0) {
@@ -291,7 +286,7 @@
             doc.setFontSize(18);
             doc.text('Deltakerliste', 105, 25, { align: 'center' });
 
-            // Add meeting overview in the PDF with the updated "Tid" format
+            // Add meeting overview in the PDF
             const meetingDate = document.getElementById('meetingDate')?.textContent?.trim() || 'Ukjent dato';
             const meetingStartTime = document.getElementById('meetingStartTime')?.textContent?.trim() || 'Ukjent starttid';
             const meetingEndTime = document.getElementById('meetingEndTime')?.textContent?.trim() || 'Ukjent sluttid';
@@ -336,11 +331,12 @@
                 row.firstName,
                 row.lastName,
                 row.email,
+                row.mobile,
                 '' // Empty box for "Møtt"
             ]);
 
             doc.autoTable({
-                head: [['Fornavn', 'Etternavn', 'E-post', 'Møtt']],
+                head: [['Fornavn', 'Etternavn', 'E-post', 'Mobil', 'Møtt']],
                 body: tableData,
                 startY: 100,
                 theme: 'grid',
@@ -508,6 +504,12 @@
 
                 console.log('Valgt dato:', selectedDate); // Logg inputdato
 
+                // Reset visibility of buttons and other elements
+                document.querySelector('.button-container').classList.remove('visible');
+                document.getElementById('exportTableButton').style.display = 'none';
+                document.getElementById('printParticipantListButton').style.display = 'none';
+                document.getElementById('updateStatusButton').style.display = 'none';
+
                 // Format the selected date to ISO 8601 format
                 const startDateTime = new Date(`${selectedDate}T00:00:00`).toISOString();
                 const endDateTime = new Date(`${selectedDate}T23:59:59`).toISOString();
@@ -521,9 +523,6 @@
                 document.getElementById('meetingDetails').style.display = 'none';
                 document.getElementById('previewTable').style.display = 'none';
                 document.getElementById('participantSummary').style.display = 'none';
-                document.getElementById('exportTableButton').style.display = 'none';
-                document.getElementById('printParticipantListButton').style.display = 'none';
-                document.getElementById('updateStatusButton').style.display = 'none';
 
                 const account = msalInstance.getActiveAccount();
                 if (!account) {
@@ -671,7 +670,30 @@
             }
         });
 
+        document.addEventListener('DOMContentLoaded', () => {
+            // Ensure buttons are hidden on page load
+            document.querySelector('.button-container').style.display = 'none';
+            document.getElementById('exportTableButton').style.display = 'none';
+            document.getElementById('printParticipantListButton').style.display = 'none';
+            document.getElementById('updateStatusButton').style.display = 'none';
+        });
+
+        document.getElementById('datePicker').addEventListener('change', () => {
+            const selectedDate = document.getElementById('datePicker').value;
+            const buttonContainer = document.querySelector('.button-container');
+            if (selectedDate) {
+                buttonContainer.style.display = 'flex'; // Show buttons if a date is selected
+            } else {
+                buttonContainer.style.display = 'none'; // Hide buttons if no date is selected
+                document.getElementById('exportTableButton').style.display = 'none';
+                document.getElementById('printParticipantListButton').style.display = 'none';
+                document.getElementById('updateStatusButton').style.display = 'none';
+            }
+        });
+
+        // Call the function to load environment variables
         loadEnvVariables();
     </script>
 </body>
 </html>
+`
