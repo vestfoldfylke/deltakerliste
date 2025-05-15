@@ -527,12 +527,14 @@ redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
                 document.getElementById('printParticipantListButton').style.display = 'none';
                 document.getElementById('updateStatusButton').style.display = 'none';
 
-                // Format the selected date to ISO 8601 format
-                const startDateTime = `${selectedDate}T00:00:00Z`; // Ensure UTC format
-                const endDateTime = `${selectedDate}T23:59:59Z`; // Ensure UTC format
+                // Format the selected date to local time range
+                const selectedDateStart = new Date(selectedDate);
+                selectedDateStart.setHours(0, 0, 0, 0);
+                const selectedDateEnd = new Date(selectedDate);
+                selectedDateEnd.setHours(23, 59, 59, 999);
 
-                console.log('Startdato og tid (ISO):', startDateTime);
-                console.log('Sluttdato og tid (ISO):', endDateTime);
+                console.log('Startdato og tid (lokal):', selectedDateStart);
+                console.log('Sluttdato og tid (lokal):', selectedDateEnd);
 
                 // Nullstill visningen
                 document.getElementById('eventList').innerHTML = '';
@@ -556,7 +558,7 @@ redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
                     graphEventsEndpoint: 'https://graph.microsoft.com/v1.0/me/events'
                 };
 
-                const eventsResponse = await fetch(`${graphConfig.graphEventsEndpoint}?startDateTime=${startDateTime}&endDateTime=${endDateTime}`, {
+                const eventsResponse = await fetch(`${graphConfig.graphEventsEndpoint}`, {
                     headers: {
                         Authorization: `Bearer ${tokenResponse.accessToken}`
                     }
@@ -564,13 +566,23 @@ redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
 
                 const events = await eventsResponse.json();
                 console.log('Rådata fra API:', events); // Logg rådata fra API-et
-                console.log('Hendelser fra API:', events.value); // Logg hele hendelseslisten
 
                 if (events.value && events.value.length > 0) {
                     const filteredEvents = events.value.filter(event => {
-                        const eventDate = new Date(event.start.dateTime || event.start.date).toISOString().split('T')[0];
-                        return eventDate === selectedDate; // Filter events matching the selected date
+                        const eventStart = event.start?.dateTime ? new Date(event.start.dateTime) : null;
+                        const eventEnd = event.end?.dateTime ? new Date(event.end.dateTime) : null;
+
+                        // Håndter hendelser uten start- eller sluttdato
+                        if (!eventStart || !eventEnd) {
+                            console.warn('Hendelse uten start- eller sluttdato:', event);
+                            return false;
+                        }
+
+                        // Sjekk om hendelsen overlapper med den valgte datoen
+                        return eventEnd >= selectedDateStart && eventStart <= selectedDateEnd;
                     });
+
+                    console.log('Filtrerte hendelser:', filteredEvents); // Logg filtrerte hendelser
 
                     if (filteredEvents.length > 0) {
                         const headers = ['Velg', 'Tittel', 'Dato', 'Starttid', 'Sluttid', 'Sted', 'Arrangør'];
@@ -703,4 +715,3 @@ redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
     </script>
 </body>
 </html>
-`
