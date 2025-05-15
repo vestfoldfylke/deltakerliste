@@ -97,10 +97,43 @@
 
             console.log('MSAL Configuration:', msalConfig);
 
-            // Forsøk automatisk innlogging med SSO
+            // Handle redirect response
+            msalInstance.handleRedirectPromise().then((response) => {
+                if (response) {
+                    console.log('Innlogging fullført via omdirigering:', response.account);
+                    msalInstance.setActiveAccount(response.account); // Sett aktiv konto etter innlogging
+                }
+
+                const activeAccount = msalInstance.getActiveAccount();
+                if (activeAccount) {
+                    handlePostLogin(msalInstance, graphConfig);
+                } else {
+                    console.warn('Ingen aktiv konto funnet. Brukeren må logge inn manuelt.');
+                    loginButton.style.display = 'inline-block'; // Vis logg inn-knappen
+                }
+
+                loginButton.disabled = false; // Aktiver knappen etter at status er avklart
+            }).catch((error) => {
+                console.error('Feil ved håndtering av omdirigering:', error);
+                loginButton.disabled = false; // Aktiver knappen selv om det oppstår en feil
+            });
+
+            // Check for an active account before attempting SSO
+            const activeAccount = msalInstance.getActiveAccount();
+            if (activeAccount) {
+                console.log('Aktiv konto funnet:', activeAccount);
+                handlePostLogin(msalInstance, graphConfig);
+                loginButton.disabled = false; // Aktiver knappen
+                return;
+            }
+
+            // Attempt SSO with loginHint if no active account is found
+            const accounts = msalInstance.getAllAccounts();
+            const loginHint = accounts.length > 0 ? accounts[0].username : ''; // Use the first account's username as loginHint
+
             msalInstance.ssoSilent({
                 scopes: ['User.Read', 'Calendars.Read'], // Be om nødvendige tillatelser
-                loginHint: '' // Kan settes til brukerens e-post hvis kjent
+                loginHint: loginHint // Bruk loginHint for å unngå kontovalg
             }).then((response) => {
                 console.log('SSO-innlogging vellykket:', response.account);
                 msalInstance.setActiveAccount(response.account); // Sett aktiv konto etter SSO
@@ -111,16 +144,12 @@
                 if (error instanceof msal.InteractionRequiredAuthError) {
                     console.log('Interaksjon kreves. Starter interaktiv innlogging...');
                     msalInstance.loginRedirect({
-                        scopes: ['User.Read', 'Calendars.Read'] // Be om nødvendige tillatelser
+                        scopes: ['User.Read', 'Calendars.Read'], // Be om nødvendige tillatelser
+                        loginHint: loginHint // Bruk loginHint for å unngå kontovalg
                     });
                 } else {
                     console.error('SSO-feil: Brukeren må logge inn manuelt.');
-                    // Vis logg inn-knappen og skjul andre elementer
-                    document.getElementById('loginButton').style.display = 'inline-block';
-                    document.getElementById('fetchEventsButton').style.display = 'none';
-                    document.getElementById('datePicker').style.display = 'none';
-                    document.getElementById('logoutButton').style.display = 'none';
-                    document.getElementById('userName').textContent = 'Ikke pålogget';
+                    loginButton.style.display = 'inline-block'; // Vis logg inn-knappen
                     loginButton.disabled = false; // Aktiver logg inn-knappen
                 }
             });
@@ -128,132 +157,13 @@
             loginButton.addEventListener('click', () => {
                 console.log('Starter manuell innlogging...');
                 msalInstance.loginRedirect({
-                    scopes: ['User.Read', 'Calendars.Read'] // Be om nødvendige tillatelser
+                    scopes: ['User.Read', 'Calendars.Read'], // Be om nødvendige tillatelser
+                    loginHint: loginHint // Bruk loginHint for å unngå kontovalg
                 });
             });
 
             document.getElementById('logoutButton').addEventListener('click', () => {
                 msalInstance.logoutRedirect();
-            });
-
-            // Aktiver fetchEventsButton etter at msalInstance er initialisert
-            document.getElementById('fetchEventsButton').addEventListener('click', async () => {
-                try {
-                    const selectedDate = document.getElementById('datePicker').value;
-                    if (!selectedDate) {
-                        throw new Error('Velg en dato først.');
-                    }
-
-                    console.log('Valgt dato:', selectedDate); // Logg inputdato
-
-                    // Format the selected date to ISO 8601 format
-                    const startDateTime = new Date(`${selectedDate}T00:00:00`).toISOString();
-                    const endDateTime = new Date(`${selectedDate}T23:59:59`).toISOString();
-
-                    console.log('Startdato og tid (ISO):', startDateTime);
-                    console.log('Sluttdato og tid (ISO):', endDateTime);
-
-                    // Nullstill visningen
-                    document.getElementById('eventList').innerHTML = '';
-                    document.getElementById('eventList').style.display = 'none';
-                    document.getElementById('meetingDetails').style.display = 'none';
-                    document.getElementById('previewTable').style.display = 'none';
-                    document.getElementById('participantSummary').style.display = 'none';
-                    document.getElementById('exportTableButton').style.display = 'none';
-                    document.getElementById('printParticipantListButton').style.display = 'none';
-                    document.getElementById('updateStatusButton').style.display = 'none';
-
-                    const account = msalInstance.getActiveAccount();
-                    if (!account) {
-                        throw new Error('Ingen brukerkonto funnet. Logg inn først.');
-                    }
-
-                    const tokenResponse = await msalInstance.acquireTokenSilent({
-                        scopes: ['Calendars.Read'],
-                        account: account
-                    });
-
-                    const graphConfig = {
-                        graphMeEndpoint: 'https://graph.microsoft.com/v1.0/me',
-                        graphEventsEndpoint: 'https://graph.microsoft.com/v1.0/me/events'
-                    };
-
-                    const eventsResponse = await fetch(`${graphConfig.graphEventsEndpoint}?startDateTime=${startDateTime}&endDateTime=${endDateTime}`, {
-                        headers: {
-                            Authorization: `Bearer ${tokenResponse.accessToken}`
-                        }
-                    });
-
-                    const events = await eventsResponse.json();
-                    console.log('Rådata fra API:', events); // Logg rådata fra API-et
-                    console.log('Hendelser fra API:', events.value); // Logg hele hendelseslisten
-
-                    if (events.value && events.value.length > 0) {
-                        const filteredEvents = events.value.filter(event => {
-                            const eventStartUTC = new Date(event.start.dateTime || event.start.date);
-                            const eventEndUTC = new Date(event.end.dateTime || event.end.date);
-
-                            // Convert event times to local time
-                            const eventStartLocal = new Date(eventStartUTC.toLocaleString('en-US', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }));
-                            const eventEndLocal = new Date(eventEndUTC.toLocaleString('en-US', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }));
-
-                            console.log('Hendelse start (lokal):', eventStartLocal);
-                            console.log('Hendelse slutt (lokal):', eventEndLocal);
-
-                            // Parse the selected date and create start and end boundaries for the day
-                            const selectedDateStart = new Date(`${selectedDate}T00:00:00`);
-                            const selectedDateEnd = new Date(`${selectedDate}T23:59:59`);
-
-                            // Check if the event overlaps with the selected date
-                            return eventStartLocal <= selectedDateEnd && eventEndLocal >= selectedDateStart;
-                        });
-
-                        if (filteredEvents.length > 0) {
-                            const headers = ['Velg', 'Tittel', 'Dato', 'Starttid', 'Sluttid', 'Sted', 'Arrangør'];
-                            const rows = filteredEvents.map(event => {
-                                const eventStart = new Date(event.start.dateTime || event.start.date);
-                                const eventEnd = new Date(event.end.dateTime || event.end.date);
-
-                                // Juster tidene med to timer
-                                eventStart.setHours(eventStart.getHours() + 2);
-                                eventEnd.setHours(eventEnd.getHours() + 2);
-
-                                const eventStartLocal = eventStart.toLocaleString('no-NO', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone });
-                                const eventEndLocal = eventEnd.toLocaleString('no-NO', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone });
-
-                                return `
-                                    <tr>
-                                        <td><input type="radio" name="event" value="${event.id}" /></td>
-                                        <td>${event.subject || 'Ingen tittel'}</td>
-                                        <td>${eventStartLocal.split(', ')[0]}</td>
-                                        <td>${event.isAllDay ? 'Heldag' : eventStartLocal.split(', ')[1]}</td>
-                                        <td>${event.isAllDay ? 'Heldag' : eventEndLocal.split(', ')[1]}</td>
-                                        <td>${event.location?.displayName || 'Ikke spesifisert'}</td>
-                                        <td>${event.organizer.emailAddress.name}</td>
-                                    </tr>
-                                `;
-                            }).join('');
-
-                            document.getElementById('eventList').innerHTML = `
-                                <table border="1" style="width: 100%; border-collapse: collapse;">
-                                    <thead>
-                                        <tr>${headers.map(header => `<th>${header}</th>`).join('')}</tr>
-                                    </thead>
-                                    <tbody>${rows}</tbody>
-                                </table>
-                            `;
-                            document.getElementById('eventList').style.display = 'block'; // Ensure the event list is visible
-                        } else {
-                            console.log('Ingen kalenderhendelser funnet for valgt dato.');
-                            document.getElementById('eventList').innerHTML = '<p>Ingen hendelser funnet for valgt dato.</p>';
-                            document.getElementById('eventList').style.display = 'block'; // Show the message
-                        }
-                    } else {
-                        console.log('Ingen kalenderhendelser funnet for valgt dato.');
-                    }
-                } catch (error) {
-                    console.error('Feil ved henting av kalenderhendelser:', error.message);
-                }
             });
         }
 
@@ -585,6 +495,125 @@
             document.getElementById('meetingOrganizer').textContent = event.organizer.emailAddress.name || 'Ikke spesifisert';
             meetingDetails.style.display = 'block';
         }
+
+        document.getElementById('fetchEventsButton').addEventListener('click', async () => {
+            try {
+                const selectedDate = document.getElementById('datePicker').value;
+                if (!selectedDate) {
+                    throw new Error('Velg en dato først.');
+                }
+
+                console.log('Valgt dato:', selectedDate); // Logg inputdato
+
+                // Format the selected date to ISO 8601 format
+                const startDateTime = new Date(`${selectedDate}T00:00:00`).toISOString();
+                const endDateTime = new Date(`${selectedDate}T23:59:59`).toISOString();
+
+                console.log('Startdato og tid (ISO):', startDateTime);
+                console.log('Sluttdato og tid (ISO):', endDateTime);
+
+                // Nullstill visningen
+                document.getElementById('eventList').innerHTML = '';
+                document.getElementById('eventList').style.display = 'none';
+                document.getElementById('meetingDetails').style.display = 'none';
+                document.getElementById('previewTable').style.display = 'none';
+                document.getElementById('participantSummary').style.display = 'none';
+                document.getElementById('exportTableButton').style.display = 'none';
+                document.getElementById('printParticipantListButton').style.display = 'none';
+                document.getElementById('updateStatusButton').style.display = 'none';
+
+                const account = msalInstance.getActiveAccount();
+                if (!account) {
+                    throw new Error('Ingen brukerkonto funnet. Logg inn først.');
+                }
+
+                const tokenResponse = await msalInstance.acquireTokenSilent({
+                    scopes: ['Calendars.Read'],
+                    account: account
+                });
+
+                const graphConfig = {
+                    graphMeEndpoint: 'https://graph.microsoft.com/v1.0/me',
+                    graphEventsEndpoint: 'https://graph.microsoft.com/v1.0/me/events'
+                };
+
+                const eventsResponse = await fetch(`${graphConfig.graphEventsEndpoint}?startDateTime=${startDateTime}&endDateTime=${endDateTime}`, {
+                    headers: {
+                        Authorization: `Bearer ${tokenResponse.accessToken}`
+                    }
+                });
+
+                const events = await eventsResponse.json();
+                console.log('Rådata fra API:', events); // Logg rådata fra API-et
+                console.log('Hendelser fra API:', events.value); // Logg hele hendelseslisten
+
+                if (events.value && events.value.length > 0) {
+                    const filteredEvents = events.value.filter(event => {
+                        const eventStartUTC = new Date(event.start.dateTime || event.start.date);
+                        const eventEndUTC = new Date(event.end.dateTime || event.end.date);
+
+                        // Convert event times to local time
+                        const eventStartLocal = new Date(eventStartUTC.toLocaleString('en-US', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }));
+                        const eventEndLocal = new Date(eventEndUTC.toLocaleString('en-US', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }));
+
+                        console.log('Hendelse start (lokal):', eventStartLocal);
+                        console.log('Hendelse slutt (lokal):', eventEndLocal);
+
+                        // Parse the selected date and create start and end boundaries for the day
+                        const selectedDateStart = new Date(`${selectedDate}T00:00:00`);
+                        const selectedDateEnd = new Date(`${selectedDate}T23:59:59`);
+
+                        // Check if the event overlaps with the selected date
+                        return eventStartLocal <= selectedDateEnd && eventEndLocal >= selectedDateStart;
+                    });
+
+                    if (filteredEvents.length > 0) {
+                        const headers = ['Velg', 'Tittel', 'Dato', 'Starttid', 'Sluttid', 'Sted', 'Arrangør'];
+                        const rows = filteredEvents.map(event => {
+                            const eventStart = new Date(event.start.dateTime || event.start.date);
+                            const eventEnd = new Date(event.end.dateTime || event.end.date);
+
+                            // Juster tidene med to timer
+                            eventStart.setHours(eventStart.getHours() + 2);
+                            eventEnd.setHours(eventEnd.getHours() + 2);
+
+                            const eventStartLocal = eventStart.toLocaleString('no-NO', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone });
+                            const eventEndLocal = eventEnd.toLocaleString('no-NO', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone });
+
+                            return `
+                                <tr>
+                                    <td><input type="radio" name="event" value="${event.id}" /></td>
+                                    <td>${event.subject || 'Ingen tittel'}</td>
+                                    <td>${eventStartLocal.split(', ')[0]}</td>
+                                    <td>${event.isAllDay ? 'Heldag' : eventStartLocal.split(', ')[1]}</td>
+                                    <td>${event.isAllDay ? 'Heldag' : eventEndLocal.split(', ')[1]}</td>
+                                    <td>${event.location?.displayName || 'Ikke spesifisert'}</td>
+                                    <td>${event.organizer.emailAddress.name}</td>
+                                </tr>
+                            `;
+                        }).join('');
+
+                        document.getElementById('eventList').innerHTML = `
+                            <table border="1" style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr>${headers.map(header => `<th>${header}</th>`).join('')}</tr>
+                                </thead>
+                                <tbody>${rows}</tbody>
+                            </table>
+                        `;
+                        document.getElementById('eventList').style.display = 'block'; // Ensure the event list is visible
+                    } else {
+                        console.log('Ingen kalenderhendelser funnet for valgt dato.');
+                        document.getElementById('eventList').innerHTML = '<p>Ingen hendelser funnet for valgt dato.</p>';
+                        document.getElementById('eventList').style.display = 'block'; // Show the message
+                    }
+                } else {
+                    console.log('Ingen kalenderhendelser funnet for valgt dato.');
+                }
+            } catch (error) {
+                console.error('Feil ved henting av kalenderhendelser:', error.message);
+            }
+        });
 
         document.getElementById('exportTableButton').addEventListener('click', () => {
             const tableRows = Array.from(document.querySelectorAll('#dataTable tbody tr'))
