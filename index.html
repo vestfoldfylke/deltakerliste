@@ -448,7 +448,7 @@ redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
             doc.setFont('Nunito Sans', 'normal');
             doc.text(`Antall deltakere:`, 10, 90);
             doc.setFont('Nunito Sans', 'bold');
-            doc.text(`${acceptedCount} av ${totalCount} inviterte`, 50, 90);
+            doc.text(`${acceptedCount} av ${totalCount} inviterte`, 40, 90); // Adjusted x-coordinate for alignment
 
             // Add table with participants
             const tableData = tableRows.map(row => [
