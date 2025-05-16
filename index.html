@@ -231,10 +231,10 @@ redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
 
                 const graphConfig = {
                     graphMeEndpoint: 'https://graph.microsoft.com/v1.0/me',
-                    graphEventsEndpoint: 'https://graph.microsoft.com/v1.0/me/events'
+                    graphEventsEndpoint: 'https://graph.microsoft.com/v1.0/me/calendarview'
                 };
 
-                const filterQuery = `$filter=start/dateTime ge '${selectedDateStart.toISOString()}' and start/dateTime lt '${selectedDateEnd.toISOString()}'`;
+                const filterQuery = `startDateTime=${selectedDateStart.toISOString()}&endDateTime=${selectedDateEnd.toISOString()}`;
                 const eventsEndpoint = `${graphConfig.graphEventsEndpoint}?${filterQuery}&$top=100`;
 
                 let events = [];
@@ -256,28 +256,33 @@ redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
                 } else {
                     const headers = ['Velg', 'Tittel', 'Dato', 'Starttid', 'Sluttid', 'Sted', 'Arrangør'];
                     const rows = events.map(event => {
-                        const eventStart = new Date(event.start.dateTime || event.start.date);
-                        const eventEnd = new Date(event.end.dateTime || event.end.date);
+                        const isAllDay = event.isAllDay || (!event.start.dateTime && event.start.date);
+                        const eventStart = isAllDay ? new Date(event.start.date) : new Date(event.start.dateTime);
+                        const eventEnd = isAllDay ? new Date(event.end.date) : new Date(event.end.dateTime);
 
-                        // Adjust times by adding 2 hours
-                        eventStart.setHours(eventStart.getHours() + 2);
-                        eventEnd.setHours(eventEnd.getHours() + 2);
+                        // Adjust times by adding 2 hours for non-all-day events
+                        if (!isAllDay) {
+                            eventStart.setHours(eventStart.getHours() + 2);
+                            eventEnd.setHours(eventEnd.getHours() + 2);
+                        }
 
                         console.log('Hendelsesdetaljer:', {
                             Tittel: event.subject,
                             Start: eventStart,
                             Slutt: eventEnd,
                             Sted: event.location?.displayName,
-                            Arrangør: event.organizer.emailAddress.name
+                            Arrangør: event.organizer.emailAddress.name,
+                            Heldag: isAllDay
                         });
 
+                        // Ensure heldagshendelser are displayed correctly
                         return `
                             <tr>
                                 <td><input type="radio" name="event" value="${event.id}" /></td>
                                 <td>${event.subject || 'Ingen tittel'}</td>
                                 <td>${eventStart.toLocaleDateString('no-NO')}</td>
-                                <td>${event.isAllDay ? 'Heldag' : eventStart.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
-                                <td>${event.isAllDay ? 'Heldag' : eventEnd.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+                                <td>${isAllDay ? 'Heldag' : eventStart.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+                                <td>${isAllDay ? 'Heldag' : eventEnd.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
                                 <td>${event.location?.displayName || 'Ikke spesifisert'}</td>
                                 <td>${event.organizer.emailAddress.name}</td>
                             </tr>
@@ -716,3 +721,4 @@ redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
     </script>
 </body>
 </html>
+`
