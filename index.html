@@ -413,11 +413,14 @@ redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
             const meetingTitle = document.getElementById('meetingTitle')?.textContent?.trim() || 'Ingen tittel';
             doc.setFont('Nunito Sans', 'bold');
             doc.setFontSize(16);
-            doc.text(meetingTitle, 105, 15, { align: 'center' });
+
+            // Split the title into multiple lines if it exceeds the maximum width
+            const titleLines = doc.splitTextToSize(meetingTitle, 140); // Set max width to 140mm
+            doc.text(titleLines, 105, 35, { align: 'center' }); // Adjust y-coordinate to add more space below the logo
 
             doc.setFont('Nunito Sans', 'normal');
             doc.setFontSize(18);
-            doc.text('Deltakerliste', 105, 25, { align: 'center' });
+            doc.text('Deltakerliste', 105, 50, { align: 'center' }); // Adjust y-coordinate for "Deltakerliste"
 
             // Add meeting overview in the PDF
             const meetingDate = document.getElementById('meetingDate')?.textContent?.trim() || 'Ukjent dato';
@@ -428,36 +431,42 @@ redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
 
             doc.setFontSize(12);
             doc.setTextColor(0, 82, 96); // Match the primary color
-            doc.text('Møteinformasjon', 10, 40);
+            doc.text('Møteinformasjon', 10, 60); // Adjust y-coordinate for "Møteinformasjon"
+
+            // Add spacing below "Møteinformasjon"
+            let currentY = 70; // Start content below "Møteinformasjon" with extra spacing
 
             doc.setFontSize(10);
             doc.setTextColor(0, 0, 0); // Default text color
-            doc.text(`Dato:`, 10, 50);
+            doc.text(`Dato:`, 10, currentY);
             doc.setFont('Nunito Sans', 'bold');
-            doc.text(meetingDate, 40, 50);
+            doc.text(meetingDate, 40, currentY);
 
+            currentY += 10; // Add spacing between rows
             doc.setFont('Nunito Sans', 'normal');
-            doc.text(`Tid:`, 10, 60);
+            doc.text(`Tid:`, 10, currentY);
             doc.setFont('Nunito Sans', 'bold');
-            doc.text(`${meetingStartTime} til ${meetingEndTime}`, 40, 60);
+            doc.text(`${meetingStartTime} til ${meetingEndTime}`, 40, currentY);
 
+            currentY += 10; // Add spacing between rows
             doc.setFont('Nunito Sans', 'normal');
-            doc.text(`Sted:`, 10, 70);
+            doc.text(`Sted:`, 10, currentY);
             doc.setFont('Nunito Sans', 'bold');
-            doc.text(meetingLocation, 40, 70);
+            doc.text(meetingLocation, 40, currentY);
 
+            currentY += 10; // Add spacing between rows
             doc.setFont('Nunito Sans', 'normal');
-            doc.text(`Arrangør:`, 10, 80);
+            doc.text(`Arrangør:`, 10, currentY);
             doc.setFont('Nunito Sans', 'bold');
-            doc.text(meetingOrganizer, 40, 80);
+            doc.text(meetingOrganizer, 40, currentY);
 
-            // Add participant count overview
-            const acceptedCount = tableRows.length;
-            const totalCount = document.querySelectorAll('#dataTable tbody tr').length;
+            currentY += 10; // Add spacing between rows
             doc.setFont('Nunito Sans', 'normal');
-            doc.text(`Antall deltakere:`, 10, 90);
+            doc.text(`Antall deltakere:`, 10, currentY);
+            const acceptedCount = document.getElementById('acceptedCount')?.textContent?.trim() || '0';
+            const totalCount = document.getElementById('totalCount')?.textContent?.trim() || '0';
             doc.setFont('Nunito Sans', 'bold');
-            doc.text(`${acceptedCount} av ${totalCount} inviterte`, 40, 90); // Adjusted x-coordinate for alignment
+            doc.text(`${acceptedCount} av ${totalCount} inviterte`, 40, currentY); // Adjusted x-coordinate for alignment
 
             // Add table with participants
             const tableData = tableRows.map(row => [
@@ -471,7 +480,7 @@ redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
             doc.autoTable({
                 head: [['Fornavn', 'Etternavn', 'E-post', 'Mobil', 'Møtt']],
                 body: tableData,
-                startY: 100,
+                startY: currentY + 10, // Add spacing between "Antall deltakere" and the table
                 theme: 'grid',
                 headStyles: {
                     fillColor: [0, 82, 96],
@@ -481,10 +490,19 @@ redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
                 },
                 bodyStyles: {
                     fontSize: 10,
-                    textColor: [40, 40, 40]
+                    textColor: [40, 40, 40],
+                    cellPadding: 2, // Add padding inside cells
+                    overflow: 'linebreak' // Enable text wrapping
                 },
                 alternateRowStyles: {
                     fillColor: [242, 246, 247]
+                },
+                columnStyles: {
+                    0: { cellWidth: 40 }, // Fornavn
+                    1: { cellWidth: 40 }, // Etternavn
+                    2: { cellWidth: 60 }, // E-post
+                    3: { cellWidth: 30 }, // Mobil
+                    4: { cellWidth: 20 }  // Møtt
                 },
                 margin: { top: 100 }
             });
@@ -588,12 +606,14 @@ redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
             }).join('');
 
             previewTable.innerHTML = `
-                <table id="dataTable" border="1" style="width: 100%; border-collapse: collapse;">
-                    <thead>
-                        <tr>${headers.map(header => `<th>${header}</th>`).join('')}</tr>
-                    </thead>
-                    <tbody>${rows}</tbody>
-                </table>
+                <div id="dataTable-container">
+                    <table id="dataTable" border="1" style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr>${headers.map(header => `<th>${header}</th>`).join('')}</tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>
             `;
             previewTable.style.display = 'block';
 
@@ -721,4 +741,3 @@ redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
     </script>
 </body>
 </html>
-`
