@@ -203,6 +203,10 @@ a:hover {
     width: 150px;
     height: 60px;
     margin-right: 20px;
+    background-size: contain; /* Skaler bildet til å passe */
+    background-repeat: no-repeat; /* Unngå gjentakelse av bildet */
+    background-position: center; /* Plasser bildet i midten */
+    display: inline-block; /* Sørg for at elementet oppfører seg som en blokk */
 }
 
 .fk-title {
@@ -237,6 +241,9 @@ a:hover {
     font-weight: bold;
     color: #111;
     letter-spacing: 2px;
+    max-width: 300px; /* Sett en maksimal bredde */
+    word-wrap: break-word; /* Aktiver tekstbryting */
+    text-align: center; /* Sentraliser teksten */
 }
 
 .header-right {
@@ -278,15 +285,43 @@ a:hover {
 
 /* Data table */
 #dataTable {
+    width: 100%; /* Ensure the table takes up the full width of its container */
     border-collapse: collapse; /* Ensure borders do not double up */
+    table-layout: auto; /* Allow columns to adjust based on content */
+}
+
+#dataTable th {
+    width: 150px; /* Set a fixed width for all headers */
 }
 
 #dataTable th, #dataTable td {
     padding: 0.5rem; /* Add padding to table cells */
     text-align: left; /* Ensure text is left-aligned */
+    word-wrap: break-word; /* Allow long words to break */
+    white-space: normal; /* Ensure text wraps */
+    overflow-wrap: break-word; /* Ensure consistent text wrapping */
+    word-break: break-word; /* Break long words without spaces */
 }
 
-/* Responsivitet */
+#dataTable tr:first-child th {
+    width: 120px; /* Set a fixed width for the first row headers */
+}
+
+/* Data table column styles */
+#dataTable th:first-child, #dataTable td:first-child {
+    width: 50px; /* Set a fixed width for the checkbox column */
+    text-align: center; /* Center align the checkboxes */
+}
+
+/* Data table responsiveness */
+#dataTable-container {
+    width: 100%; /* Ensure the container takes up the full width */
+    overflow-x: auto; /* Add horizontal scrolling for small screens */
+    margin-top: var(--spacing); /* Add spacing above the table */
+    display: block; /* Ensure the container behaves as a block element */
+}
+
+/* Data table responsiveness */
 @media (max-width: 900px) {
     .header {
         flex-direction: column;
@@ -296,5 +331,68 @@ a:hover {
     .header-center,
     .header-right {
         margin-bottom: 10px;
+    }
+    #dataTable-container {
+        overflow-x: auto; /* Ensure horizontal scrolling on smaller screens */
+    }
+    #dataTable th:first-child, #dataTable td:first-child {
+        width: 60px; /* Slightly increase width for smaller screens */
+    }
+}
+
+/* Additional responsiveness for smaller screens */
+@media (max-width: 600px) {
+    body {
+        padding: 10px; /* Reduce padding for smaller screens */
+    }
+
+    .header {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    .header-left, .header-center, .header-right {
+        margin-bottom: 10px;
+        width: 100%; /* Ensure full width for header sections */
+    }
+
+    .fk-logo {
+        width: 100px; /* Juster bredden for mindre skjermer */
+        height: auto; /* Behold proporsjonene */
+    }
+
+    .fk-logo, .dust-logo {
+        width: 100px; /* Scale down logos */
+        height: auto;
+    }
+
+    .fk-title, .dust-title {
+        font-size: 1.5rem; /* Reduce font size */
+    }
+
+    #meetingDetails {
+        width: 100%; /* Make meeting details take full width */
+    }
+
+    #dataTable-container {
+        overflow-x: auto; /* Ensure horizontal scrolling for tables */
+    }
+
+    #dataTable th, #dataTable td {
+        font-size: 0.8rem; /* Reduce font size for table content */
+        white-space: normal; /* Ensure text wraps */
+        word-wrap: break-word; /* Allow long words to break */
+        overflow-wrap: break-word; /* Ensure consistent text wrapping */
+        word-break: break-word; /* Break long words without spaces */
+    }
+
+    .button-container {
+        flex-direction: column; /* Stack buttons vertically */
+        gap: var(--spacing-small);
+    }
+
+    button {
+        width: 100%; /* Make buttons full width */
     }
 }
