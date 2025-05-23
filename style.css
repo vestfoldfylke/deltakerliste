@@ -86,7 +86,9 @@ button {
 }
 
 button:hover {
-    background-color: var(--primary-color-80);
+    background-color: var(--primary-color); /* Keep the primary color */
+    color: var(--font-color-inverted); /* Ensure text remains visible */
+    opacity: 0.9; /* Slightly reduce opacity for hover effect */
 }
 
 button:disabled {
