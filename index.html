@@ -561,9 +561,41 @@ redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
         }
 
         function toggleAllAccepted(checkbox) {
-            const participantCheckboxes = document.querySelectorAll('.accepted-checkbox');
-            participantCheckboxes.forEach(cb => cb.checked = checkbox.checked);
-            updateParticipantSummary(); // Update the summary dynamically
+            // Deaktiver den andre checkboxen hvis denne er valgt
+            const other = document.getElementById('toggleAcceptedAndNone');
+            if (checkbox.checked) {
+                other.checked = false;
+                // Marker alle
+                const participantCheckboxes = document.querySelectorAll('.accepted-checkbox');
+                participantCheckboxes.forEach(cb => cb.checked = true);
+            } else {
+                // Fjern alle markeringer
+                const participantCheckboxes = document.querySelectorAll('.accepted-checkbox');
+                participantCheckboxes.forEach(cb => cb.checked = false);
+            }
+            updateParticipantSummary();
+        }
+
+        function toggleAcceptedAndNone(checkbox) {
+            // Deaktiver den andre checkboxen hvis denne er valgt
+            const other = document.getElementById('toggleAllAccepted');
+            if (checkbox.checked) {
+                other.checked = false;
+                const rows = document.querySelectorAll('#dataTable tbody tr');
+                rows.forEach(row => {
+                    const status = row.getAttribute('data-status');
+                    if ((status === 'accepted' || status === 'none') && status !== 'declined') {
+                        row.querySelector('.accepted-checkbox').checked = true;
+                    } else {
+                        row.querySelector('.accepted-checkbox').checked = false;
+                    }
+                });
+            } else {
+                // Fjern alle markeringer
+                const participantCheckboxes = document.querySelectorAll('.accepted-checkbox');
+                participantCheckboxes.forEach(cb => cb.checked = false);
+            }
+            updateParticipantSummary();
         }
 
         function displayPreviewTable(meetingData) {
@@ -572,7 +604,20 @@ redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
             const acceptedCountElement = document.getElementById('acceptedCount');
             const notAcceptedCountElement = document.getElementById('notAcceptedCount');
 
-            const headers = ['<input type="checkbox" id="toggleAllAccepted" onclick="toggleAllAccepted(this)" />', 'Fornavn', 'Etternavn', 'Firma', 'Mobil', 'Nøkkelord', 'Starttid', 'Sluttid', 'Kortnummer', 'Kommentar', 'E-post'];
+            // Endre: Begge checkboxene i samme kolonne, på samme linje, med lite mellomrom
+            const headers = [
+                `<div style="display:flex;flex-direction:column;align-items:center;">
+                    <span style="font-size:11px;line-height:1.2;margin-bottom:2px;">
+                        <span style="white-space:nowrap;">Alle</span> /
+                        <span style="white-space:nowrap;">Akseptert+Ingen svar</span>
+                    </span>
+                    <div style="display:inline-flex;align-items:center;">
+                        <input type="checkbox" id="toggleAllAccepted" onclick="toggleAllAccepted(this)" title="Velg alle" style="margin-right:2px;" />
+                        <input type="checkbox" id="toggleAcceptedAndNone" onclick="toggleAcceptedAndNone(this)" title="Velg alle som har akseptert eller ikke svart" style="margin-left:2px;" />
+                    </div>
+                </div>`,
+                'Fornavn', 'Etternavn', 'Firma', 'Mobil', 'Nøkkelord', 'Starttid', 'Sluttid', 'Kortnummer', 'Kommentar', 'E-post'
+            ];
             const rows = meetingData.participants.map(p => {
                 let firstName = p.firstName;
                 if (firstName.includes('@')) {
@@ -588,8 +633,9 @@ redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
                 adjustedStartTime.setHours(adjustedStartTime.getHours() + 2);
                 adjustedEndTime.setHours(adjustedEndTime.getHours() + 2);
 
+                // NY: Legg til data-status attributt for å kunne filtrere på status
                 return `
-                    <tr>
+                    <tr data-status="${p.status}">
                         <td><input type="checkbox" class="accepted-checkbox" ${isAccepted ? 'checked' : ''} /></td>
                         <td contenteditable="true">${firstName}</td>
                         <td contenteditable="true">${p.lastName}</td>
