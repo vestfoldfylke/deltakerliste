@@ -1,2 +1,61 @@
 # Deltakerliste
-En applikasjon som lager en deltakerliste basert på en outlook innkalling
+
+Et webverktøy for opprettelse av deltakerliste basert på en kalenderinvitasjon. 
+Excelfil er tilpasset malen for import av deltakere til systemet onVisit besøksregistrering.
+
+---
+
+## 🧭 Innholdsfortegnelse
+
+- [Om prosjektet](#om-prosjektet)  
+- [Demo / skjermbilder](#demo--skjermbilder)  
+- [Teknologi](#teknologi)  
+- [Kom i gang](#kom-i-gang)  
+  - [Forutsetninger](#forutsetninger)  
+  - [Installasjon](#installasjon)  
+- [Bruk](#bruk)  
+- [Bidra](#bidra)  
+- [Licence](#license)  
+- [Kontakt](#kontakt)  
+- [Bidragsytere](#bidragsytere)  
+
+---
+
+## Om prosjektet
+
+`Deltakerliste` er utviklet for å **vise og eksportere deltakerlister** til arrangementer i fylkeskommunen, for å enkelt skrive ut gjestebevis ved større arrangementer. 
+Tanken er å tilby en enkelt og effektivt verktøy, både for ansatte som har ansvar for å skrive ut gjestebevis og arrangører som skal melde i fra hvem som skal besøke fylkeskommunen på aktuelt tidspunkt.
+
+### Bakgrunn ###
+Bakgrunnen for løsningen var behovet om forenkling av deltakerregistrering for navnelapper, på store møter. Som ble inmeldt av en ansatt via Idéportalen til fylkeskommunen, idé 35.
+
+---
+
+## Demo / skjermbilder
+
+
+---
+
+## Teknologi
+
+- Frontend: HTML, JavaScript og CSS
+- Backend: Pålogging via Microsoft 365 med Enterprise app og tilgang til brukerens kalender via Graph API
+
+---
+
+## Kom i gang
+
+### 🚧 Forutsetninger
+
+- Microsoft 365
+
+### 💾 Installasjon
+
+git clone https://github.com/vestfoldfylke/deltakerliste.git
+cd deltakerliste
+npm install
+npm start
+
+### ⏺️ Konfigurasjojn ###
+Opprett en enterprise app
+Gi tilgang til å lese 
