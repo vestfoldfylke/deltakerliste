@@ -1,7 +1,6 @@
 # Deltakerliste
+Nettside for å generere deltakerlister basert på kalenderhendelser fra Microsoft Outlook og eksport til besøksregistreringsløsningen onVisit i henhold til mal. 
 
-Nettside for å generere deltakerlister basert på kalenderhendelser fra Microsoft Outlook for eksport til besøksregistreringsløsningen onVisit i henhold til mal. 
----
 
 ## 🧭 Innholdsfortegnelse
 
@@ -39,7 +38,7 @@ Brukergrensesnittet inneholder følgende funksjoner:
 - Brukerinteraksjon
  
 ## Demo / skjermbilder
-
+![content](https://github.com/user-attachments/assets/18046bc4-837d-4bc0-8341-61fa8758e77b)
 
 ---
 
@@ -54,7 +53,19 @@ Brukergrensesnittet inneholder følgende funksjoner:
 
 ### 🚧 Forutsetninger
 
-- Microsoft 365
+#### Git
+Du må ha Git installert på systemet ditt for å kunne klone repositoriet.
+Installasjon: Last ned og installer Git.
+
+#### Node.js og npm
+Verktøyet krever Node.js og npm (Node Package Manager) for å installere og kjøre avhengigheter.
+Installasjon: Last ned og installer Node.js og npm.
+
+#### Nødvendige avhengigheter
+Etter å ha klonet repositoriet, må du installere alle nødvendige avhengigheter.
+
+Kjør npm install i prosjektets rotkatalog for å installere alle avhengigheter
+
 
 ### 💾 Installasjon
 
@@ -63,6 +74,9 @@ cd deltakerliste
 npm install
 npm start
 
-### ⏺️ Konfigurasjojn
-Opprett en enterprise app
-Gi tilgang til å lese 
+### ⏺️ Konfigurasjon
+Opprett en enterprise app via Microsoft Azure Portal
+Gi tilgang til å lese brukerprofil, kalender og opprettholde tilgangen til dataene
+Oppdater koden med appid og tenantid
+
+
