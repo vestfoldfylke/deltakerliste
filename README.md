@@ -1,8 +1,6 @@
 # Deltakerliste
 
-Et webverktøy for opprettelse av deltakerliste basert på en kalenderinvitasjon. 
-Excelfil er tilpasset malen for import av deltakere til systemet onVisit besøksregistrering.
-
+Nettside for å generere deltakerlister basert på kalenderhendelser fra Microsoft Outlook for eksport til besøksregistreringsløsningen onVisit i henhold til mal. 
 ---
 
 ## 🧭 Innholdsfortegnelse
@@ -31,6 +29,15 @@ Bakgrunnen for løsningen var behovet om forenkling av deltakerregistrering for 
 
 ---
 
+## Bruk
+Brukergrensesnittet inneholder følgende funksjoner:
+- Autentisering
+- Kalenderintegrasjon
+- Deltakerhåndtering
+- Eksport og utskrift
+- Responsivt design
+- Brukerinteraksjon
+ 
 ## Demo / skjermbilder
 
 
@@ -56,6 +63,6 @@ cd deltakerliste
 npm install
 npm start
 
-### ⏺️ Konfigurasjojn ###
+### ⏺️ Konfigurasjojn
 Opprett en enterprise app
 Gi tilgang til å lese 
