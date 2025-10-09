@@ -169,12 +169,19 @@ a:hover {
 
 /* Logout button */
 #logoutButton {
-    font-size: 1rem;
-    color: #035b68;
+    display: inline-block;
+    position: static;
+    font-size: 1.2rem;
+    color: #d32f2f;
     background: none;
     border: none;
     cursor: pointer;
-    text-align: right;
+    margin: 0 0 0 0.2rem;
+    vertical-align: middle;
+}
+
+#logoutButton:hover {
+    color: #b71c1c;
 }
 
 /* Login button */
@@ -254,18 +261,32 @@ a:hover {
     align-items: flex-end; /* Align items to the right */
     min-width: 170px;
     margin-top: 10px;
+    position: relative;
 }
 
 .user-info {
     display: flex;
-    flex-direction: column; /* Stack name and button vertically */
-    align-items: flex-end; /* Align to the right */
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.7rem;
+    position: relative;
+    min-width: 200px;
+    width: 220px;
+}
+
+.user-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.2rem;
+    width: 100%;
+    margin-bottom: 0;
 }
 
 .user-name {
     font-size: 1rem;
     color: #035b68;
-    margin-bottom: 0.5rem; /* Add spacing below the name */
+    margin: 0;
 }
 
 /* Button alignment */
@@ -397,4 +418,167 @@ a:hover {
     button {
         width: 100%; /* Make buttons full width */
     }
+}
+
+/* Calendar select menu */
+.select-calendar {
+    font-family: inherit;
+    font-size: 1rem;
+    padding: 0.5rem 1rem;
+    border: 2px solid var(--primary-color);
+    border-radius: 0.4rem;
+    background-color: var(--primary-background-color);
+    color: var(--font-color);
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+    width: 100%;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.select-calendar:focus {
+    outline: 4px solid var(--primary-color);
+    outline-offset: -4px;
+}
+
+.select-calendar:hover {
+    border-color: var(--primary-color);
+    background-color: #e9f7fb;
+}
+
+/* Calendar dropdown styles */
+.calendar-dropdown-container {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 38px;
+    min-width: 260px;
+    padding-bottom: 2rem;
+    flex-direction: column;
+    gap: 0.5rem;
+    background: #e9f7fb;
+    border: 1px solid var(--primary-color);
+    border-radius: 0.4rem;
+    z-index: 10;
+}
+
+.calendar-dropdown-container input[type="text"] {
+    margin-top: 2.2rem;
+    margin-left: auto;
+    margin-right: auto;
+    width: 90%;
+    display: block;
+    position: relative;
+    z-index: 12;
+}
+
+.calendar-dropdown-close {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    font-size: 1.2rem;
+    color: #035b68;
+    background: none;
+    border: none;
+    cursor: pointer;
+    z-index: 11;
+    font-weight: bold;
+}
+
+.calendar-dropdown-close:hover {
+    color: #d32f2f;
+}
+
+.calendar-label {
+    cursor: pointer;
+    color: #035b68;
+    font-size: 0.95rem;
+    margin-top: 0.5rem;
+    margin-bottom: 0.2rem;
+    font-weight: 600;
+}
+
+/* Additional styles for hidden elements */
+#calendarSelect {
+    display: block;
+}
+#datePickerLabel {
+    text-align: center;
+    margin-top: 2rem;
+    display: none;
+}
+#datePicker {
+    display: none;
+    margin-bottom: 1rem;
+}
+#fetchEventsButton {
+    display: none;
+}
+#meetingDetails {
+    display: none;
+    margin-bottom: 1rem;
+    padding: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 0.5rem;
+    background-color: #f9f9f9;
+}
+#meetingDetails h2 {
+    margin-bottom: 0.5rem;
+}
+#statusMessage {
+    display: none;
+    color: red;
+    text-align: center;
+    margin-top: 1rem;
+}
+.button-container {
+    display: none;
+}
+#previewTable {
+    display: none;
+    margin-top: 1rem;
+}
+#participantSummary {
+    display: none;
+    margin-top: 1rem;
+    font-weight: bold;
+}
+
+/* Mailbox suggestion styles */
+.mailbox-suggestion {
+    display: none;
+    position: relative;
+    left: 0;
+    top: 0.2rem;
+    background: #fff;
+    border: 1px solid var(--primary-color);
+    border-radius: 0.3rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    min-width: 220px;
+    z-index: 11;
+    padding: 0.3rem 0.7rem;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.mailbox-suggestion-item {
+    display: block;
+    padding: 0.3rem 0.2rem;
+    cursor: pointer;
+    color: #035b68;
+    font-size: 0.98rem;
+}
+
+.mailbox-suggestion-item:hover {
+    background: #e9f7fb;
+    color: #222;
+}
+
+.mailbox-suggestion-title {
+    font-weight: bold;
+    color: #035b68;
+    font-size: 1.05rem;
+    margin-bottom: 0.2rem;
+    margin-top: 0.1rem;
+    letter-spacing: 0.5px;
 }
