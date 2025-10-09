@@ -47,6 +47,7 @@ Brukergrensesnittet inneholder følgende funksjoner:
 - Frontend: HTML, JavaScript og CSS
 - Backend: Pålogging via Microsoft 365 med Enterprise app og tilgang til brukerens kalender via Graph API
 
+Løsningen er i stor grad utviklet ved bruk av Kunstig intelligens igjennom Github Copilot i Visual Studio code.
 ---
 
 ## Kom i gang

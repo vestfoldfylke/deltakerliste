@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dataoversikt</title>
+    <link rel="stylesheet" href="style.css"> <!-- Bruk eksisterende CSS -->
+    <style>
+        body {
+            padding: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: var(--primary-color);
+            color: var(--font-color-inverted);
+        }
+        h1 {
+            color: var(--primary-color);
+        }
+    </style>
+</head>
+<body>
+    <h1>Dataoversikt</h1>
+    <p>Her er en oversikt over dataene som er lastet inn, hvordan de er mappet til funksjoner, og hvor de brukes.</p>
+
+    <h2>Lastet inn data</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Datafelt</th>
+                <th>Beskrivelse</th>
+                <th>Kilde</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>meetingTitle</td>
+                <td>Tittel på møtet</td>
+                <td>Microsoft Graph API</td>
+            </tr>
+            <tr>
+                <td>meetingDate</td>
+                <td>Dato for møtet</td>
+                <td>Microsoft Graph API</td>
+            </tr>
+            <tr>
+                <td>meetingStartTime</td>
+                <td>Starttid for møtet</td>
+                <td>Microsoft Graph API</td>
+            </tr>
+            <tr>
+                <td>meetingEndTime</td>
+                <td>Sluttid for møtet</td>
+                <td>Microsoft Graph API</td>
+            </tr>
+            <tr>
+                <td>meetingLocation</td>
+                <td>Sted for møtet</td>
+                <td>Microsoft Graph API</td>
+            </tr>
+            <tr>
+                <td>participants</td>
+                <td>Liste over deltakere</td>
+                <td>Microsoft Graph API</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>Mapping mellom data og funksjoner</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Funksjon</th>
+                <th>Data brukt</th>
+                <th>Beskrivelse</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>displayMeetingDetails(event)</td>
+                <td>meetingTitle, meetingDate, meetingStartTime, meetingEndTime, meetingLocation</td>
+                <td>Viser detaljer om møtet.</td>
+            </tr>
+            <tr>
+                <td>parseGraphEvents(events)</td>
+                <td>participants</td>
+                <td>Parser deltakere fra hendelser.</td>
+            </tr>
+            <tr>
+                <td>displayPreviewTable(meetingData)</td>
+                <td>participants</td>
+                <td>Viser forhåndsvisningstabell med deltakere.</td>
+            </tr>
+            <tr>
+                <td>generateExcel(meetingData)</td>
+                <td>participants, meetingStartTime, meetingEndTime</td>
+                <td>Eksporterer deltakerliste til Excel.</td>
+            </tr>
+            <tr>
+                <td>updateParticipantSummary()</td>
+                <td>participants</td>
+                <td>Oppdaterer sammendrag av deltakere.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>Bruksområder</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Datafelt</th>
+                <th>Brukt i</th>
+                <th>Beskrivelse</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>meetingTitle</td>
+                <td>displayMeetingDetails, generateExcel</td>
+                <td>Vises i møtedetaljer og brukes i Excel-eksport.</td>
+            </tr>
+            <tr>
+                <td>meetingDate</td>
+                <td>displayMeetingDetails</td>
+                <td>Vises i møtedetaljer.</td>
+            </tr>
+            <tr>
+                <td>participants</td>
+                <td>parseGraphEvents, displayPreviewTable, updateParticipantSummary</td>
+                <td>Brukes til å vise og oppdatere deltakerinformasjon.</td>
+            </tr>
+        </tbody>
+    </table>
+</body>
+</html>
