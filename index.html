@@ -141,34 +141,9 @@
                 loginButton.disabled = false;
             });
 
-            // Attempt SSO with loginHint if no active account is found
-            const accounts = msalInstance.getAllAccounts();
-            const loginHint = accounts.length > 0 ? accounts[0].username : '';
-
-            msalInstance.ssoSilent({
-                scopes: ['User.Read', 'Calendars.Read'],
-                loginHint: loginHint
-            }).then((response) => {
-                msalInstance.setActiveAccount(response.account);
-                handlePostLogin(msalInstance, graphConfig);
-            }).catch((error) => {
-                // Håndter samtykke/tilgangsfeil
-                if (error instanceof msal.InteractionRequiredAuthError || error.errorCode === 'consent_required' || error.errorCode === 'interaction_required') {
-                    msalInstance.loginRedirect({
-                        scopes: ['User.Read', 'Calendars.Read'],
-                        prompt: 'consent', // Tving samtykke
-                        loginHint: loginHint
-                    });
-                } else {
-                    loginButton.style.display = 'block';
-                    loginButton.disabled = false;
-                }
-            });
-
             loginButton.addEventListener('click', () => {
                 msalInstance.loginRedirect({
-                    scopes: ['User.Read', 'Calendars.Read']
-                    // prompt: 'consent' // Fjernet for å unngå tvungen samtykke hver gang
+                    scopes: ['User.Read', 'Calendars.Read', 'Group.Read.All']
                 });
             });
 
