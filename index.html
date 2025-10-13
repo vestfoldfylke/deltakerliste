@@ -471,13 +471,7 @@
                 if (manualSharedMailbox) {
                     eventUrl = `https://graph.microsoft.com/v1.0/users/${manualSharedMailbox}/events/${selectedEventId}`;
                 } else {
-                    const calendarId = selectedCalendarId;
-                    const selectedOption = document.getElementById('calendarSelect').selectedOptions[0];
-                    if (selectedOption && selectedOption.getAttribute('data-group') === 'true') {
-                        eventUrl = `https://graph.microsoft.com/v1.0/groups/${calendarId}/events/${selectedEventId}`;
-                    } else {
-                        eventUrl = `https://graph.microsoft.com/v1.0/me/events/${selectedEventId}`;
-                    }
+                    eventUrl = `https://graph.microsoft.com/v1.0/me/events/${selectedEventId}`;
                 }
                 const eventResponse = await fetch(eventUrl, {
                     headers: {
