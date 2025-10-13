@@ -167,8 +167,8 @@
 
             loginButton.addEventListener('click', () => {
                 msalInstance.loginRedirect({
-                    scopes: ['User.Read', 'Calendars.Read'],
-                    prompt: 'consent' // Tving samtykke ved manuell innlogging
+                    scopes: ['User.Read', 'Calendars.Read']
+                    // prompt: 'consent' // Fjernet for å unngå tvungen samtykke hver gang
                 });
             });
 
