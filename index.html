@@ -29,6 +29,7 @@
     </style>
 </head>
 <body>
+    <div class="driftsmelding">Nettstedet oppdateres de neste timene. Løsningen kan oppleves litt uvanlig.</div>
     <header class="header">
         <div class="header-left">
             <img src="vfk_logo.png" alt="Vestfold fylkeskommune logo" class="fk-logo">
@@ -88,6 +89,11 @@
     <div id="previewTable"></div>
     <div id="participantSummary"></div>
 
+    <script src="env.js"></script>
+    <script type="module">
+        import { clientId, authority, redirectUri } from './config.js';
+        window.envConfig = { clientId, authority, redirectUri };
+    </script>
     <script>
         let msalInstance; // Definer msalInstance som en global variabel
 
@@ -95,9 +101,9 @@
             try {
                 const msalConfig = {
                     auth: {
-                        clientId: '160b2de0-4af8-4b98-ae4e-9ce17b3793e4', // Endre til din egen verdi
-                        authority: 'https://login.microsoftonline.com/0a8a3b9a-8dcd-4ebc-9305-f971454d49bb',    // Endre til din egen verdi
-                        redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
+                        clientId: window.envConfig.clientId,
+                        authority: window.envConfig.authority,
+                        redirectUri: window.envConfig.redirectUri
                     }
                 };
 
