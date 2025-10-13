@@ -698,14 +698,16 @@
 
         function parseGraphEvents(events) {
             const participants = events.flatMap(event =>
-                event.attendees.map(attendee => ({
-                    firstName: attendee.emailAddress.name.split(' ')[0],
-                    lastName: attendee.emailAddress.name.split(' ')[1] || '',
-                    email: attendee.emailAddress.address,
-                    status: attendee.status.response || 'unknown' // Legg til status
-                }))
+                event.attendees.map(attendee => {
+                    const nameParts = attendee.emailAddress.name.trim().split(' ');
+                    return {
+                        firstName: nameParts[0],
+                        lastName: nameParts.slice(1).join(' '),
+                        email: attendee.emailAddress.address,
+                        status: attendee.status.response || 'unknown' // Legg til status
+                    };
+                })
             );
-
             return {
                 startTime: events[0]?.start?.dateTime || 'Ukjent starttid',
                 endTime: events[0]?.end?.dateTime || 'Ukjent sluttid',
