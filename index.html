@@ -43,19 +43,19 @@
         </div>
         <div class="header-right">
             <div class="user-info">
-                    <button id="logoutButton" title="Logg ut">×</button>
-                    <span class="user-name" id="userName">Ikke pålogget</span>
+                <div class="user-row">
+                    <span class="user-name" id="userName">Ikke pålogget</span><button id="logoutButton" title="Logg ut">×</button>
                 </div>
                 <a href="https://forms.office.com/e/FiSVZRZLVa" target="_blank" class="button">Send tilbakemelding</a>
                 <span class="calendar-label" id="openCalendarDropdown">Åpne annen kalender</span>
                 <div class="calendar-dropdown-container" id="calendarDropdown">
                     <button class="calendar-dropdown-close" id="closeCalendarDropdown" title="Lukk">×</button>
                     <label for="manualSharedMailbox">Skriv inn delt postboks</label>
-                    <input type="text" id="manualSharedMailbox" placeholder="f.eks. sentralbord@365.had.no" autocomplete="off" />
+                    <input type="text" id="manualSharedMailbox" placeholder="E-postadressen til kalenderen" autocomplete="off" />
                     <div class="mailbox-suggestion" id="mailboxSuggestion">
                         <div class="mailbox-suggestion-title">Forslag</div>
-                        <span class="mailbox-suggestion-item" id="suggestionSentralbord">sentralbord@365.had.no</span>
-                        <span class="mailbox-suggestion-item" id="suggestionVestfold">sentralbord@vestfoldfylke.no</span>
+                        <span class="mailbox-suggestion-item" id="suggestionSkiringssal">tbg-mr-skiringssal@vestfoldfylke.no</span>
+                        <span class="mailbox-suggestion-item" id="suggestionSentralbord">sentralbord@vestfoldfylke.no</span>
                     </div>
                 </div>
             </div>
@@ -963,7 +963,7 @@ redirectUri: 'http://localhost:5501' // Endre til din egen URL
         const manualSharedMailbox = document.getElementById('manualSharedMailbox');
         const mailboxSuggestion = document.getElementById('mailboxSuggestion');
         const suggestionSentralbord = document.getElementById('suggestionSentralbord');
-        const suggestionVestfold = document.getElementById('suggestionVestfold');
+        const suggestionSkiringssal = document.getElementById('suggestionSkiringssal');
         manualSharedMailbox.addEventListener('focus', function() {
             mailboxSuggestion.style.display = 'block';
         });
@@ -975,7 +975,7 @@ redirectUri: 'http://localhost:5501' // Endre til din egen URL
             manualSharedMailbox.value = this.textContent;
             mailboxSuggestion.style.display = 'none';
         });
-        suggestionVestfold.addEventListener('mousedown', function(e) {
+        suggestionSkiringssal.addEventListener('mousedown', function(e) {
             e.preventDefault();
             manualSharedMailbox.value = this.textContent;
             mailboxSuggestion.style.display = 'none';
