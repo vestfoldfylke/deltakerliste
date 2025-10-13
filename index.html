@@ -29,6 +29,7 @@
     </style>
 </head>
 <body>
+    <div class="driftsmelding">Nettstedet oppdateres de neste timene. Løsningen kan oppleves litt uvanlig.</div>
     <header class="header">
         <div class="header-left">
             <img src="vfk_logo.png" alt="Vestfold fylkeskommune logo" class="fk-logo">
@@ -43,20 +44,32 @@
         </div>
         <div class="header-right">
             <div class="user-info">
-                <div class="user-name" id="userName">Ikke pålogget</div>
-                <button id="logoutButton" style="background: none; border: none; padding: 0; cursor: pointer; color: inherit;">Logg ut</button>
+                <div class="user-row">
+                    <span class="user-name" id="userName">Ikke pålogget</span><button id="logoutButton" title="Logg ut">×</button>
+                </div>
                 <a href="https://forms.office.com/e/FiSVZRZLVa" target="_blank" class="button">Send tilbakemelding</a>
+                <span class="calendar-label" id="openCalendarDropdown">Åpne annen kalender</span>
+                <div class="calendar-dropdown-container" id="calendarDropdown">
+                    <button class="calendar-dropdown-close" id="closeCalendarDropdown" title="Lukk">×</button>
+                    <label for="manualSharedMailbox">Skriv inn delt postboks</label>
+                    <input type="text" id="manualSharedMailbox" placeholder="E-postadressen til kalenderen" autocomplete="off" />
+                    <div class="mailbox-suggestion" id="mailboxSuggestion">
+                        <div class="mailbox-suggestion-title">Forslag</div>
+                        <span class="mailbox-suggestion-item" id="suggestionSkiringssal">tbg-mr-skiringssal@vestfoldfylke.no</span>
+                        <span class="mailbox-suggestion-item" id="suggestionSentralbord">sentralbord@vestfoldfylke.no</span>
+                    </div>
+                </div>
             </div>
         </div>
     </header>
     <button id="loginButton">Logg inn med Microsoft</button>
-    <h1 id="datePickerLabel" style="text-align: center; margin-top: 2rem; display: none;">Velg dato</h1>
-    <input type="date" id="datePicker" style="display: none; margin-bottom: 1rem;" />
-    <button id="fetchEventsButton" style="display: none;">Hent kalenderhendelser</button>
-    <div id="eventList" style="display: none;"></div> <!-- Endret fra select til div -->
-    <br> <!-- Add a line break -->
-    <div id="meetingDetails" style="display: none; margin-bottom: 1rem; padding: 1rem; border: 1px solid #ccc; border-radius: 0.5rem; background-color: #f9f9f9;">
-        <h2 style="margin-bottom: 0.5rem;">Møteinformasjon</h2>
+    <h1 id="datePickerLabel">Velg dato</h1>
+    <input type="date" id="datePicker" />
+    <button id="fetchEventsButton">Hent kalenderhendelser</button>
+    <div id="eventList"></div>
+    <br>
+    <div id="meetingDetails">
+        <h2>Møteinformasjon</h2>
         <p><strong>Tittel:</strong> <span id="meetingTitle">Ingen tittel</span></p>
         <p><strong>Dato:</strong> <span id="meetingDate">Ukjent dato</span></p>
         <p><strong>Starttid:</strong> <span id="meetingStartTime">Ukjent starttid</span></p>
@@ -67,17 +80,20 @@
         <p><strong>Akseptert:</strong> <span id="acceptedCount">0</span></p>
         <p><strong>Ikke akseptert:</strong> <span id="notAcceptedCount">0</span></p>
     </div>
-    <div id="statusMessage" style="display: none; color: red; text-align: center; margin-top: 1rem;"></div>
-    <div class="button-container" style="display: none;">
+    <div id="statusMessage"></div>
+    <div class="button-container">
         <button id="exportTableButton" title="Last ned deltakerlisten som Excel-fil. Filen er formatert for import til besøksregistreringssystemet onVisit">Eksporter tabell til Excel</button>
         <button id="printParticipantListButton" title="Skriv ut deltakerlisten som PDF">Skriv ut deltakerliste</button>
         <button id="updateStatusButton" title="Oppdater status for deltakerne fra kalenderen">Oppdater status</button>
     </div>
-    <div id="previewTable" style="display: none; margin-top: 1rem;"></div> <!-- Forhåndsvisningstabell -->
-    <div id="participantSummary" style="display: none; margin-top: 1rem; font-weight: bold;">
+    <div id="previewTable"></div>
+    <div id="participantSummary"></div>
 
-    </div>
-
+    <script src="env.js"></script>
+    <script type="module">
+        import { clientId, authority, redirectUri } from './config.js';
+        window.envConfig = { clientId, authority, redirectUri };
+    </script>
     <script>
         let msalInstance; // Definer msalInstance som en global variabel
 
@@ -85,9 +101,9 @@
             try {
                 const msalConfig = {
                     auth: {
-                        clientId: '160b2de0-4af8-4b98-ae4e-9ce17b3793e4', // Endre til din egen verdi
-authority: 'https://login.microsoftonline.com/0a8a3b9a-8dcd-4ebc-9305-f971454d49bb',    // Endre til din egen verdi
-redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
+                        clientId: window.envConfig.clientId,
+                        authority: window.envConfig.authority,
+                        redirectUri: window.envConfig.redirectUri
                     }
                 };
 
@@ -103,69 +119,168 @@ redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
         }
 
         function initializeApp(msalConfig, graphConfig) {
-            msalInstance = new msal.PublicClientApplication(msalConfig); // Initialiser msalInstance
+            msalInstance = new msal.PublicClientApplication(msalConfig);
             const loginButton = document.getElementById('loginButton');
-            loginButton.disabled = true; // Deaktiver knappen til innloggingsstatus er avklart
+            loginButton.disabled = true;
 
             console.log('MSAL Configuration:', msalConfig);
 
             // Handle redirect response
             msalInstance.handleRedirectPromise().then((response) => {
                 if (response) {
-                    console.log('Innlogging fullført via omdirigering:', response.account);
-                    msalInstance.setActiveAccount(response.account); // Sett aktiv konto etter innlogging
+                    msalInstance.setActiveAccount(response.account);
                 }
-
                 const activeAccount = msalInstance.getActiveAccount();
                 if (activeAccount) {
                     handlePostLogin(msalInstance, graphConfig);
                 } else {
-                    console.warn('Ingen aktiv konto funnet. Brukeren må logge inn manuelt.');
-                    loginButton.style.display = 'block'; // Vis logg inn-knappen
+                    loginButton.style.display = 'block';
                 }
-
-                loginButton.disabled = false; // Aktiver knappen etter at status er avklart
+                loginButton.disabled = false;
             }).catch((error) => {
-                console.error('Feil ved håndtering av omdirigering:', error);
-                loginButton.disabled = false; // Aktiver knappen selv om det oppstår en feil
+                loginButton.disabled = false;
             });
 
             // Attempt SSO with loginHint if no active account is found
             const accounts = msalInstance.getAllAccounts();
-            const loginHint = accounts.length > 0 ? accounts[0].username : ''; // Use the first account's username as loginHint
+            const loginHint = accounts.length > 0 ? accounts[0].username : '';
 
             msalInstance.ssoSilent({
-                scopes: ['User.Read', 'Calendars.Read'], // Be om nødvendige tillatelser
-                loginHint: loginHint // Bruk loginHint for å unngå kontovalg
+                scopes: ['User.Read', 'Calendars.Read'],
+                loginHint: loginHint
             }).then((response) => {
-                console.log('SSO-innlogging vellykket:', response.account);
-                msalInstance.setActiveAccount(response.account); // Sett aktiv konto etter SSO
+                msalInstance.setActiveAccount(response.account);
                 handlePostLogin(msalInstance, graphConfig);
             }).catch((error) => {
-                console.warn('SSO-innlogging feilet:', error);
-
-                if (error instanceof msal.InteractionRequiredAuthError) {
-                    console.log('Interaksjon kreves. Starter interaktiv innlogging...');
+                // Håndter samtykke/tilgangsfeil
+                if (error instanceof msal.InteractionRequiredAuthError || error.errorCode === 'consent_required' || error.errorCode === 'interaction_required') {
                     msalInstance.loginRedirect({
-                        scopes: ['User.Read', 'Calendars.Read'], // Be om nødvendige tillatelser
-                        loginHint: loginHint // Bruk loginHint for å unngå kontovalg
+                        scopes: ['User.Read', 'Calendars.Read'],
+                        prompt: 'consent', // Tving samtykke
+                        loginHint: loginHint
                     });
                 } else {
-                    console.error('SSO-feil: Brukeren må logge inn manuelt.');
-                    loginButton.style.display = 'block'; // Vis logg inn-knappen
-                    loginButton.disabled = false; // Aktiver logg inn-knappen
+                    loginButton.style.display = 'block';
+                    loginButton.disabled = false;
                 }
             });
 
             loginButton.addEventListener('click', () => {
-                console.log('Starter manuell innlogging...');
                 msalInstance.loginRedirect({
-                    scopes: ['User.Read', 'Calendars.Read'], // Be om nødvendige tillatelser
+                    scopes: ['User.Read', 'Calendars.Read'],
+                    prompt: 'consent' // Tving samtykke ved manuell innlogging
                 });
             });
 
             document.getElementById('logoutButton').addEventListener('click', () => {
                 msalInstance.logoutRedirect();
+            });
+        }
+
+        async function fetchSharedMailboxes(token) {
+            // Hent grupper brukeren er medlem av
+            const url = 'https://graph.microsoft.com/v1.0/me/memberOf?$select=id,displayName,@odata.type';
+            const response = await fetch(url, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const data = await response.json();
+            // Filtrer kun grupper
+            const groups = (data.value || []).filter(obj => obj['@odata.type'] === '#microsoft.graph.group');
+            // Hent e-post for hver gruppe og filtrer kun delte postbokser
+            const mailboxes = [];
+            for (const group of groups) {
+                const groupDetailsUrl = `https://graph.microsoft.com/v1.0/groups/${group.id}?$select=id,displayName,mail,groupTypes`;
+                const groupDetailsResp = await fetch(groupDetailsUrl, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                if (groupDetailsResp.ok) {
+                    const groupDetails = await groupDetailsResp.json();
+                    // Filtrer kun delte postbokser: må ha mail, ikke være Microsoft 365-gruppe (groupTypes må være tom eller ikke inneholde 'Unified'), og ikke onmicrosoft.com
+                    if (
+                        groupDetails.mail &&
+                        (!groupDetails.groupTypes || !groupDetails.groupTypes.includes('Unified')) &&
+                        !groupDetails.mail.endsWith('@onmicrosoft.com')
+                    ) {
+                        mailboxes.push({ id: groupDetails.id, displayName: groupDetails.displayName, mail: groupDetails.mail });
+                    }
+                }
+            }
+            return mailboxes;
+        }
+
+        async function fetchGroupCalendars(token, groupId) {
+            // Hent kalendere for en gruppe (delt postboks)
+            const url = `https://graph.microsoft.com/v1.0/groups/${groupId}/calendar`;
+            const response = await fetch(url, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                return [{ id: groupId, name: data.name || 'Delt postboks', group: true }];
+            }
+            return [];
+        }
+
+        async function fetchCalendars(token) {
+            // Hent alle kalendere brukeren har tilgang til
+            const url = 'https://graph.microsoft.com/v1.0/me/calendars';
+            const response = await fetch(url, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const data = await response.json();
+            return data.value || [];
+        }
+
+        async function populateCalendarSelect() {
+            const account = msalInstance.getActiveAccount();
+            let tokenResponse;
+            try {
+                tokenResponse = await msalInstance.acquireTokenSilent({
+                    scopes: ['Calendars.Read', 'Group.Read.All'],
+                    account: account
+                });
+            } catch (error) {
+                if (error instanceof msal.InteractionRequiredAuthError || error.errorCode === 'consent_required' || error.errorCode === 'interaction_required') {
+                    await msalInstance.loginRedirect({
+                        scopes: ['User.Read', 'Calendars.Read', 'Group.Read.All'],
+                        prompt: 'consent',
+                        loginHint: account?.username || ''
+                    });
+                    return;
+                } else {
+                    throw error;
+                }
+            }
+            const calendars = await fetchCalendars(tokenResponse.accessToken);
+            const sharedMailboxes = await fetchSharedMailboxes(tokenResponse.accessToken);
+            let sharedCalendars = [];
+            for (const mailbox of sharedMailboxes) {
+                const groupCals = await fetchGroupCalendars(tokenResponse.accessToken, mailbox.id);
+                sharedCalendars = sharedCalendars.concat(groupCals.map(cal => ({
+                    id: cal.id,
+                    name: `${mailbox.displayName} (delt postboks)`,
+                    group: true
+                })));
+            }
+            const select = document.getElementById('calendarSelect');
+            select.innerHTML = '';
+            calendars.forEach(cal => {
+                const option = document.createElement('option');
+                option.value = cal.id;
+                option.textContent = cal.name;
+                select.appendChild(option);
+            });
+            sharedCalendars.forEach(cal => {
+                const option = document.createElement('option');
+                option.value = cal.id;
+                option.textContent = cal.name;
+                option.setAttribute('data-group', 'true');
+                select.appendChild(option);
+            });
+            select.style.display = 'block';
+            selectedCalendarId = select.value;
+            select.addEventListener('change', function() {
+                selectedCalendarId = this.value;
             });
         }
 
@@ -181,6 +296,7 @@ redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
                 document.getElementById('loginButton').style.display = 'none'; // Skjul logg inn-knappen
                 document.querySelector('.button-container').style.display = 'flex'; // Show button container
             }
+            populateCalendarSelect();
         }
 
         async function fetchWithRetry(url, options, retries = 3, delay = 1000) {
@@ -208,38 +324,49 @@ redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
         }
 
         document.getElementById('fetchEventsButton').addEventListener('click', async () => {
+            const statusMessage = document.getElementById('statusMessage');
+            statusMessage.textContent = '';
+            statusMessage.style.display = 'none';
             try {
                 const selectedDate = document.getElementById('datePicker').value;
                 if (!selectedDate) {
                     throw new Error('Velg en dato først.');
                 }
-
                 const selectedDateStart = new Date(selectedDate);
                 selectedDateStart.setHours(0, 0, 0, 0);
                 const selectedDateEnd = new Date(selectedDate);
                 selectedDateEnd.setHours(23, 59, 59, 999);
-
-                console.log('Valgt dato:', selectedDate);
-                console.log('Startdato og tid (ISO):', selectedDateStart.toISOString());
-                console.log('Sluttdato og tid (ISO):', selectedDateEnd.toISOString());
-
                 const account = msalInstance.getActiveAccount();
-                const tokenResponse = await msalInstance.acquireTokenSilent({
-                    scopes: ['Calendars.Read'],
-                    account: account
-                });
-
-                const graphConfig = {
-                    graphMeEndpoint: 'https://graph.microsoft.com/v1.0/me',
-                    graphEventsEndpoint: 'https://graph.microsoft.com/v1.0/me/calendarview'
-                };
-
+                let tokenResponse;
+                try {
+                    tokenResponse = await msalInstance.acquireTokenSilent({
+                        scopes: ['Calendars.Read', 'Group.Read.All'],
+                        account: account
+                    });
+                } catch (error) {
+                    if (error instanceof msal.InteractionRequiredAuthError || error.errorCode === 'consent_required' || error.errorCode === 'interaction_required') {
+                        await msalInstance.loginRedirect({
+                            scopes: ['User.Read', 'Calendars.Read', 'Group.Read.All'],
+                            prompt: 'consent',
+                            loginHint: account?.username || ''
+                        });
+                        return;
+                    } else {
+                        throw error;
+                    }
+                }
+                // Sjekk om manuell delt postboks er angitt
+                const manualSharedMailbox = document.getElementById('manualSharedMailbox').value.trim();
+                let graphEventsEndpoint;
+                if (manualSharedMailbox) {
+                    graphEventsEndpoint = `https://graph.microsoft.com/v1.0/users/${manualSharedMailbox}/calendar/calendarView`;
+                } else {
+                    graphEventsEndpoint = 'https://graph.microsoft.com/v1.0/me/calendarview';
+                }
                 const filterQuery = `startDateTime=${selectedDateStart.toISOString()}&endDateTime=${selectedDateEnd.toISOString()}`;
-                const eventsEndpoint = `${graphConfig.graphEventsEndpoint}?${filterQuery}&$top=100`;
-
+                const eventsEndpoint = `${graphEventsEndpoint}?${filterQuery}&$top=100`;
                 let events = [];
                 let nextLink = eventsEndpoint;
-
                 while (nextLink) {
                     const eventsData = await fetchWithRetry(nextLink, {
                         headers: { Authorization: `Bearer ${tokenResponse.accessToken}` }
@@ -300,6 +427,14 @@ redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
                     document.getElementById('eventList').style.display = 'block';
                 }
             } catch (error) {
+                const statusMessage = document.getElementById('statusMessage');
+                if (error.message.includes('status: 404')) {
+                    statusMessage.textContent = 'Fant ikke kalenderen for den angitte postboksen, eller du har ikke tilgang. Sjekk e-postadressen og tilgang.';
+                    statusMessage.style.display = 'block';
+                } else {
+                    statusMessage.textContent = 'Feil ved henting av kalenderhendelser: ' + error.message;
+                    statusMessage.style.display = 'block';
+                }
                 console.error('Feil ved henting av kalenderhendelser:', error.message);
             }
         });
@@ -310,29 +445,54 @@ redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
                 if (!selectedEvent) {
                     throw new Error('Velg en kalenderhendelse først.');
                 }
-
                 const selectedEventId = selectedEvent.value;
                 const account = msalInstance.getActiveAccount();
-                const tokenResponse = await msalInstance.acquireTokenSilent({
-                    scopes: ['Calendars.Read'],
-                    account: account
-                });
-
-                const graphConfig = {
-                    graphMeEndpoint: 'https://graph.microsoft.com/v1.0/me',
-                    graphEventsEndpoint: 'https://graph.microsoft.com/v1.0/me/events'
-                };
-
-                const eventResponse = await fetch(`${graphConfig.graphEventsEndpoint}/${selectedEventId}`, {
+                let tokenResponse;
+                try {
+                    tokenResponse = await msalInstance.acquireTokenSilent({
+                        scopes: ['Calendars.Read', 'Group.Read.All'],
+                        account: account
+                    });
+                } catch (error) {
+                    if (error instanceof msal.InteractionRequiredAuthError || error.errorCode === 'consent_required' || error.errorCode === 'interaction_required') {
+                        await msalInstance.loginRedirect({
+                            scopes: ['User.Read', 'Calendars.Read', 'Group.Read.All'],
+                            prompt: 'consent',
+                            loginHint: account?.username || ''
+                        });
+                        return;
+                    } else {
+                        throw error;
+                    }
+                }
+                // Sjekk om manuell delt postboks er angitt
+                const manualSharedMailbox = document.getElementById('manualSharedMailbox').value.trim();
+                let eventUrl;
+                if (manualSharedMailbox) {
+                    eventUrl = `https://graph.microsoft.com/v1.0/users/${manualSharedMailbox}/events/${selectedEventId}`;
+                } else {
+                    const calendarId = selectedCalendarId;
+                    const selectedOption = document.getElementById('calendarSelect').selectedOptions[0];
+                    if (selectedOption && selectedOption.getAttribute('data-group') === 'true') {
+                        eventUrl = `https://graph.microsoft.com/v1.0/groups/${calendarId}/events/${selectedEventId}`;
+                    } else {
+                        eventUrl = `https://graph.microsoft.com/v1.0/me/events/${selectedEventId}`;
+                    }
+                }
+                const eventResponse = await fetch(eventUrl, {
                     headers: {
                         Authorization: `Bearer ${tokenResponse.accessToken}`
                     }
                 });
-
+                if (!eventResponse.ok) {
+                    throw new Error('Kunne ikke hente kalenderhendelse (status ' + eventResponse.status + ')');
+                }
                 const event = await eventResponse.json();
+                if (!event || !event.start) {
+                    throw new Error('Kalenderhendelsen mangler nødvendig data.');
+                }
                 displayMeetingDetails(event); // Display meeting details
                 const meetingData = parseGraphEvents([event]);
-
                 // Show the preview table and buttons
                 displayPreviewTable(meetingData);
                 document.querySelector('.button-container').classList.add('visible'); // Show button container
@@ -353,10 +513,24 @@ redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
 
                 const selectedEventId = selectedEvent.value;
                 const account = msalInstance.getActiveAccount();
-                const tokenResponse = await msalInstance.acquireTokenSilent({
-                    scopes: ['Calendars.Read'],
-                    account: account
-                });
+                let tokenResponse;
+                try {
+                    tokenResponse = await msalInstance.acquireTokenSilent({
+                        scopes: ['Calendars.Read'],
+                        account: account
+                    });
+                } catch (error) {
+                    if (error instanceof msal.InteractionRequiredAuthError || error.errorCode === 'consent_required' || error.errorCode === 'interaction_required') {
+                        await msalInstance.loginRedirect({
+                            scopes: ['User.Read', 'Calendars.Read'],
+                            prompt: 'consent',
+                            loginHint: account?.username || ''
+                        });
+                        return;
+                    } else {
+                        throw error;
+                    }
+                }
 
                 const graphConfig = {
                     graphMeEndpoint: 'https://graph.microsoft.com/v1.0/me',
@@ -524,14 +698,16 @@ redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
 
         function parseGraphEvents(events) {
             const participants = events.flatMap(event =>
-                event.attendees.map(attendee => ({
-                    firstName: attendee.emailAddress.name.split(' ')[0],
-                    lastName: attendee.emailAddress.name.split(' ')[1] || '',
-                    email: attendee.emailAddress.address,
-                    status: attendee.status.response || 'unknown' // Legg til status
-                }))
+                event.attendees.map(attendee => {
+                    const nameParts = attendee.emailAddress.name.trim().split(' ');
+                    return {
+                        firstName: nameParts[0],
+                        lastName: nameParts.slice(1).join(' '),
+                        email: attendee.emailAddress.address,
+                        status: attendee.status.response || 'unknown' // Legg til status
+                    };
+                })
             );
-
             return {
                 startTime: events[0]?.start?.dateTime || 'Ukjent starttid',
                 endTime: events[0]?.end?.dateTime || 'Ukjent sluttid',
@@ -782,8 +958,36 @@ redirectUri: 'https://deltakerliste.vercel.app' // Endre til din egen URL
             }
         });
 
+        document.getElementById('openCalendarDropdown').addEventListener('click', function() {
+            const dropdown = document.getElementById('calendarDropdown');
+            dropdown.style.display = dropdown.style.display === 'flex' ? 'none' : 'flex';
+        });
+        document.getElementById('closeCalendarDropdown').addEventListener('click', function() {
+            document.getElementById('calendarDropdown').style.display = 'none';
+        });
         // Call the function to load environment variables
         loadEnvVariables();
+
+        const manualSharedMailbox = document.getElementById('manualSharedMailbox');
+        const mailboxSuggestion = document.getElementById('mailboxSuggestion');
+        const suggestionSentralbord = document.getElementById('suggestionSentralbord');
+        const suggestionSkiringssal = document.getElementById('suggestionSkiringssal');
+        manualSharedMailbox.addEventListener('focus', function() {
+            mailboxSuggestion.style.display = 'block';
+        });
+        manualSharedMailbox.addEventListener('blur', function() {
+            setTimeout(() => mailboxSuggestion.style.display = 'none', 200);
+        });
+        suggestionSentralbord.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            manualSharedMailbox.value = this.textContent;
+            mailboxSuggestion.style.display = 'none';
+        });
+        suggestionSkiringssal.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            manualSharedMailbox.value = this.textContent;
+            mailboxSuggestion.style.display = 'none';
+        });
     </script>
 </body>
 </html>
