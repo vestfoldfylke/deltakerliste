@@ -57,6 +57,12 @@
                         <div class="mailbox-suggestion-title">Forslag</div>
                         <span class="mailbox-suggestion-item" id="suggestionSkiringssal">tbg-mr-skiringssal@vestfoldfylke.no</span>
                         <span class="mailbox-suggestion-item" id="suggestionSentralbord">sentralbord@vestfoldfylke.no</span>
+                        <span class="mailbox-suggestion-item" id="suggestionOseberg">tbg-mr-oseberg@vestfoldfylke.no</span>
+                        <span class="mailbox-suggestion-item" id="suggestionBorre">tbg-mr-borre@vestfoldfylke.no</span>
+                        <span class="mailbox-suggestion-item" id="suggestionGokstad">tbg-mr-gokstad@vestfoldfylke.no</span>
+                        <span class="mailbox-suggestion-item" id="suggestionBokeskogen">tbg-mr-bokeskogen@vestfoldfylke.no</span>
+                        <span class="mailbox-suggestion-item" id="suggestionSandar">tbg-mr-sandar@vestfoldfylke.no</span>
+                        <span class="mailbox-suggestion-item" id="suggestionRe">tbg-mr-re@vestfoldfylke.no</span>
                     </div>
                 </div>
             </div>
@@ -131,6 +137,12 @@
                     msalInstance.setActiveAccount(response.account);
                 }
                 const activeAccount = msalInstance.getActiveAccount();
+                const openCalendarDropdownBtn = document.getElementById('openCalendarDropdown');
+                if (!activeAccount) {
+                    openCalendarDropdownBtn.style.display = 'none'; // Skjul knappen når ikke pålogget
+                } else {
+                    openCalendarDropdownBtn.style.display = 'inline-block'; // Vis knappen når pålogget
+                }
                 if (activeAccount) {
                     handlePostLogin(msalInstance, graphConfig);
                 } else {
@@ -956,6 +968,36 @@
             mailboxSuggestion.style.display = 'none';
         });
         suggestionSkiringssal.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            manualSharedMailbox.value = this.textContent;
+            mailboxSuggestion.style.display = 'none';
+        });
+        suggestionOseberg.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            manualSharedMailbox.value = this.textContent;
+            mailboxSuggestion.style.display = 'none';
+        });
+        suggestionBorre.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            manualSharedMailbox.value = this.textContent;
+            mailboxSuggestion.style.display = 'none';
+        });
+        suggestionGokstad.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            manualSharedMailbox.value = this.textContent;
+            mailboxSuggestion.style.display = 'none';
+        });
+        suggestionBokeskogen.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            manualSharedMailbox.value = this.textContent;
+            mailboxSuggestion.style.display = 'none';
+        });
+        suggestionSandar.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            manualSharedMailbox.value = this.textContent;
+            mailboxSuggestion.style.display = 'none';
+        });
+        suggestionRe.addEventListener('mousedown', function(e) {
             e.preventDefault();
             manualSharedMailbox.value = this.textContent;
             mailboxSuggestion.style.display = 'none';
