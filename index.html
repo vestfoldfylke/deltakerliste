@@ -137,6 +137,12 @@
                     msalInstance.setActiveAccount(response.account);
                 }
                 const activeAccount = msalInstance.getActiveAccount();
+                const openCalendarDropdownBtn = document.getElementById('openCalendarDropdown');
+                if (!activeAccount) {
+                    openCalendarDropdownBtn.style.display = 'none'; // Skjul knappen når ikke pålogget
+                } else {
+                    openCalendarDropdownBtn.style.display = 'inline-block'; // Vis knappen når pålogget
+                }
                 if (activeAccount) {
                     handlePostLogin(msalInstance, graphConfig);
                 } else {
