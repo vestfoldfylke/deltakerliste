@@ -1,5 +1,5 @@
 # Deltakerliste
-Nettside for å generere deltakerlister basert på kalenderhendelser fra Microsoft Outlook og eksport til besøksregistreringsløsningen onVisit i henhold til mal. 
+Nettside for å generere deltakerlister basert på kalenderhendelser fra Microsoft Outlook og eksport til besøksregistreringsløsningen onVisit i henhold til mal. .
 
 
 ## 🧭 Innholdsfortegnelse
