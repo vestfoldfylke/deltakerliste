@@ -376,8 +376,8 @@
 
                         // Adjust times by adding 2 hours for non-all-day events
                         if (!isAllDay) {
-                            eventStart.setHours(eventStart.getHours() + 2);
-                            eventEnd.setHours(eventEnd.getHours() + 2);
+                            eventStart.setHours(eventStart.getHours() + 1);
+                            eventEnd.setHours(eventEnd.getHours() + 1);
                         }
 
                         console.log('Hendelsesdetaljer:', {
@@ -787,8 +787,8 @@
                 // Adjust start and end times by two hours
                 const adjustedStartTime = new Date(meetingData.startTime);
                 const adjustedEndTime = new Date(meetingData.endTime);
-                adjustedStartTime.setHours(adjustedStartTime.getHours() + 2);
-                adjustedEndTime.setHours(adjustedEndTime.getHours() + 2);
+                adjustedStartTime.setHours(adjustedStartTime.getHours() + 1);
+                adjustedEndTime.setHours(adjustedEndTime.getHours() + 1);
 
                 // NY: Legg til data-status attributt for å kunne filtrere på status
                 return `
@@ -839,8 +839,8 @@
             let eventEnd = new Date(event.end.dateTime || event.end.date);
 
             // Juster tidene med to timer
-            eventStart.setHours(eventStart.getHours() + 2);
-            eventEnd.setHours(eventEnd.getHours() + 2);
+            eventStart.setHours(eventStart.getHours() + 1);
+            eventEnd.setHours(eventEnd.getHours() + 1);
 
             document.getElementById('meetingTitle').textContent = event.subject || 'Ingen tittel';
             document.getElementById('meetingDate').textContent = eventStart.toLocaleDateString('no-NO');
