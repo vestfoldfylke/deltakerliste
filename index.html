@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="style.css"> <!-- Inkluder CSS-filen -->
     <link rel="icon" href="icon.ico" type="image/x-icon"> <!-- Legg til ikon -->
     <script src="xlsx.full.min.js"></script> <!-- XLSX.js er et JavaScript-bibliotek som lar deg lese og skrive Excel-filer i nettleseren. -->
+    <script src="https://cdn.jsdelivr.net/npm/luxon@3/build/global/luxon.min.js"></script> <!-- Luxon for tidssonehåndtering -->
     <script src="https://alcdn.msauth.net/browser/2.32.0/js/msal-browser.min.js"></script> <!-- Microsoft Authentication Library (MSAL) for JavaScript. It is used to handle authentication and authorization in web applications that integrate with Microsoft services, such as Azure Active Directory (Azure AD) or Microsoft Graph API.-->
     <script src="jspdf.umd.min.js"></script> <!-- Allows you to create PDF files programmatically. -->
     <script src="jspdf.plugin.autotable.min.js"></script> <!-- Allows you to create and format tables in PDFs. -->
@@ -163,7 +164,7 @@
                 msalInstance.logoutRedirect();
             });
         }
-
+        
         async function fetchSharedMailboxes(token) {
             // Hent grupper brukeren er medlem av
             const url = 'https://graph.microsoft.com/v1.0/me/memberOf?$select=id,displayName,@odata.type';
@@ -368,22 +369,22 @@
                     document.getElementById('eventList').innerHTML = '<p>Ingen hendelser funnet for valgt dato.</p>';
                     document.getElementById('eventList').style.display = 'block';
                 } else {
+
+                    const { DateTime } = luxon;
                     const headers = ['Velg', 'Tittel', 'Dato', 'Starttid', 'Sluttid', 'Sted', 'Arrangør'];
                     const rows = events.map(event => {
                         const isAllDay = event.isAllDay || (!event.start.dateTime && event.start.date);
-                        const eventStart = isAllDay ? new Date(event.start.date) : new Date(event.start.dateTime);
-                        const eventEnd = isAllDay ? new Date(event.end.date) : new Date(event.end.dateTime);
-
-                        // Adjust times by adding 2 hours for non-all-day events
-                        if (!isAllDay) {
-                            eventStart.setHours(eventStart.getHours() + 1);
-                            eventEnd.setHours(eventEnd.getHours() + 1);
-                        }
+                        const eventStartLuxon = isAllDay
+                            ? DateTime.fromISO(event.start.date, { zone: 'Europe/Oslo' })
+                            : DateTime.fromISO(event.start.dateTime, { zone: 'utc' }).setZone('Europe/Oslo');
+                        const eventEndLuxon = isAllDay
+                            ? DateTime.fromISO(event.end.date, { zone: 'Europe/Oslo' })
+                            : DateTime.fromISO(event.end.dateTime, { zone: 'utc' }).setZone('Europe/Oslo');
 
                         console.log('Hendelsesdetaljer:', {
                             Tittel: event.subject,
-                            Start: eventStart,
-                            Slutt: eventEnd,
+                            Start: eventStartLuxon.toISO(),
+                            Slutt: eventEndLuxon.toISO(),
                             Sted: event.location?.displayName,
                             Arrangør: event.organizer.emailAddress.name,
                             Heldag: isAllDay
@@ -394,9 +395,9 @@
                             <tr>
                                 <td><input type="radio" name="event" value="${event.id}" /></td>
                                 <td>${event.subject || 'Ingen tittel'}</td>
-                                <td>${eventStart.toLocaleDateString('no-NO')}</td>
-                                <td>${isAllDay ? 'Heldag' : eventStart.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
-                                <td>${isAllDay ? 'Heldag' : eventEnd.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+                                <td>${eventStartLuxon.toFormat('dd.MM.yyyy')}</td>
+                                <td>${isAllDay ? 'Heldag' : eventStartLuxon.toFormat('HH:mm')}</td>
+                                <td>${isAllDay ? 'Heldag' : eventEndLuxon.toFormat('HH:mm')}</td>
                                 <td>${event.location?.displayName || 'Ikke spesifisert'}</td>
                                 <td>${event.organizer.emailAddress.name}</td>
                             </tr>
@@ -784,11 +785,10 @@
                 const firma = p.email.split('@')[1]?.split('.')[0] || 'Ukjent'; // Extract domain name from email
                 const isAccepted = p.status === 'accepted'; // Check if status is "Accepted"
 
-                // Adjust start and end times by two hours
-                const adjustedStartTime = new Date(meetingData.startTime);
-                const adjustedEndTime = new Date(meetingData.endTime);
-                adjustedStartTime.setHours(adjustedStartTime.getHours() + 1);
-                adjustedEndTime.setHours(adjustedEndTime.getHours() + 1);
+                // Bruk Luxon for automatisk norsk tid
+                const { DateTime } = luxon;
+                const startLuxon = DateTime.fromISO(meetingData.startTime, { zone: 'utc' }).setZone('Europe/Oslo');
+                const endLuxon = DateTime.fromISO(meetingData.endTime, { zone: 'utc' }).setZone('Europe/Oslo');
 
                 // NY: Legg til data-status attributt for å kunne filtrere på status
                 return `
@@ -799,8 +799,8 @@
                         <td contenteditable="true">${firma}</td>
                         <td contenteditable="true">${p.mobile || ''}</td>
                         <td contenteditable="true"></td>
-                        <td>${adjustedStartTime.toLocaleDateString()} ${adjustedStartTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
-                        <td>${adjustedEndTime.toLocaleDateString()} ${adjustedEndTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+                        <td>${startLuxon.toFormat('dd.MM.yyyy HH:mm')}</td>
+                        <td>${endLuxon.toFormat('dd.MM.yyyy HH:mm')}</td>
                         <td contenteditable="true"></td>
                         <td contenteditable="true"></td>
                         <td contenteditable="true">${p.email}</td>
@@ -835,17 +835,18 @@
 
         function displayMeetingDetails(event) {
             const meetingDetails = document.getElementById('meetingDetails');
-            let eventStart = new Date(event.start.dateTime || event.start.date);
-            let eventEnd = new Date(event.end.dateTime || event.end.date);
-
-            // Juster tidene med to timer
-            eventStart.setHours(eventStart.getHours() + 1);
-            eventEnd.setHours(eventEnd.getHours() + 1);
+            const { DateTime } = luxon;
+            let eventStartLuxon = event.start.dateTime
+                ? DateTime.fromISO(event.start.dateTime, { zone: 'utc' }).setZone('Europe/Oslo')
+                : DateTime.fromISO(event.start.date, { zone: 'Europe/Oslo' });
+            let eventEndLuxon = event.end.dateTime
+                ? DateTime.fromISO(event.end.dateTime, { zone: 'utc' }).setZone('Europe/Oslo')
+                : DateTime.fromISO(event.end.date, { zone: 'Europe/Oslo' });
 
             document.getElementById('meetingTitle').textContent = event.subject || 'Ingen tittel';
-            document.getElementById('meetingDate').textContent = eventStart.toLocaleDateString('no-NO');
-            document.getElementById('meetingStartTime').textContent = eventStart.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            document.getElementById('meetingEndTime').textContent = eventEnd.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            document.getElementById('meetingDate').textContent = eventStartLuxon.toFormat('dd.MM.yyyy');
+            document.getElementById('meetingStartTime').textContent = eventStartLuxon.toFormat('HH:mm');
+            document.getElementById('meetingEndTime').textContent = eventEndLuxon.toFormat('HH:mm');
             document.getElementById('meetingLocation').textContent = event.location?.displayName || 'Ikke spesifisert';
             document.getElementById('meetingOrganizer').textContent = event.organizer.emailAddress.name || 'Ikke spesifisert';
 
