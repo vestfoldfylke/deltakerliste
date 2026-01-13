@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="style.css"> <!-- Inkluder CSS-filen -->
     <link rel="icon" href="icon.ico" type="image/x-icon"> <!-- Legg til ikon -->
     <script src="xlsx.full.min.js"></script> <!-- XLSX.js er et JavaScript-bibliotek som lar deg lese og skrive Excel-filer i nettleseren. -->
+    <script src="luxon.min.js"></script> <!-- Luxon for tidssonehåndtering -->
     <script src="https://alcdn.msauth.net/browser/2.32.0/js/msal-browser.min.js"></script> <!-- Microsoft Authentication Library (MSAL) for JavaScript. It is used to handle authentication and authorization in web applications that integrate with Microsoft services, such as Azure Active Directory (Azure AD) or Microsoft Graph API.-->
     <script src="jspdf.umd.min.js"></script> <!-- Allows you to create PDF files programmatically. -->
     <script src="jspdf.plugin.autotable.min.js"></script> <!-- Allows you to create and format tables in PDFs. -->
@@ -370,33 +371,33 @@
                 } else {
                     const headers = ['Velg', 'Tittel', 'Dato', 'Starttid', 'Sluttid', 'Sted', 'Arrangør'];
                     const rows = events.map(event => {
+                        const DateTime = luxon.DateTime;
                         const isAllDay = event.isAllDay || (!event.start.dateTime && event.start.date);
-                        const eventStart = isAllDay ? new Date(event.start.date) : new Date(event.start.dateTime);
-                        const eventEnd = isAllDay ? new Date(event.end.date) : new Date(event.end.dateTime);
-
-                        // Adjust times by adding 2 hours for non-all-day events
-                        if (!isAllDay) {
-                            eventStart.setHours(eventStart.getHours() + 1);
-                            eventEnd.setHours(eventEnd.getHours() + 1);
+                        let eventStart, eventEnd;
+                        if (isAllDay) {
+                            eventStart = DateTime.fromISO(event.start.date, { zone: 'Europe/Oslo' });
+                            eventEnd = DateTime.fromISO(event.end.date, { zone: 'Europe/Oslo' });
+                        } else {
+                            eventStart = DateTime.fromISO(event.start.dateTime, { zone: event.start.timeZone || 'Europe/Oslo' }).setZone('Europe/Oslo');
+                            eventEnd = DateTime.fromISO(event.end.dateTime, { zone: event.end.timeZone || 'Europe/Oslo' }).setZone('Europe/Oslo');
                         }
 
                         console.log('Hendelsesdetaljer:', {
                             Tittel: event.subject,
-                            Start: eventStart,
-                            Slutt: eventEnd,
+                            Start: eventStart.toISO(),
+                            Slutt: eventEnd.toISO(),
                             Sted: event.location?.displayName,
                             Arrangør: event.organizer.emailAddress.name,
                             Heldag: isAllDay
                         });
 
-                        // Ensure heldagshendelser are displayed correctly
                         return `
                             <tr>
                                 <td><input type="radio" name="event" value="${event.id}" /></td>
                                 <td>${event.subject || 'Ingen tittel'}</td>
-                                <td>${eventStart.toLocaleDateString('no-NO')}</td>
-                                <td>${isAllDay ? 'Heldag' : eventStart.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
-                                <td>${isAllDay ? 'Heldag' : eventEnd.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+                                <td>${eventStart.toLocaleString(DateTime.DATE_SHORT, { locale: 'no' })}</td>
+                                <td>${isAllDay ? 'Heldag' : eventStart.toLocaleString(DateTime.TIME_24_SIMPLE, { locale: 'no' })}</td>
+                                <td>${isAllDay ? 'Heldag' : eventEnd.toLocaleString(DateTime.TIME_24_SIMPLE, { locale: 'no' })}</td>
                                 <td>${event.location?.displayName || 'Ikke spesifisert'}</td>
                                 <td>${event.organizer.emailAddress.name}</td>
                             </tr>
@@ -692,7 +693,8 @@
             return {
                 startTime: events[0]?.start?.dateTime || 'Ukjent starttid',
                 endTime: events[0]?.end?.dateTime || 'Ukjent sluttid',
-                participants
+                participants,
+                event: events[0] // Legg til event-objektet for korrekt tidssone
             };
         }
 
@@ -775,22 +777,34 @@
                 </div>`,
                 'Fornavn', 'Etternavn', 'Firma', 'Mobil', 'Nøkkelord', 'Starttid', 'Sluttid', 'Kortnummer', 'Kommentar', 'E-post'
             ];
+            const DateTime = luxon.DateTime;
+            // For å vise riktig tid for hver deltaker, bruk event-objektet fra meetingData
+            // meetingData bør inneholde event-objektet som har start og end
+            let eventStart, eventEnd;
+            if (meetingData.event) {
+                if (meetingData.event.start.dateTime) {
+                    eventStart = DateTime.fromISO(meetingData.event.start.dateTime, { zone: meetingData.event.start.timeZone || 'Europe/Oslo' }).setZone('Europe/Oslo');
+                } else {
+                    eventStart = DateTime.fromISO(meetingData.event.start.date, { zone: 'Europe/Oslo' });
+                }
+                if (meetingData.event.end.dateTime) {
+                    eventEnd = DateTime.fromISO(meetingData.event.end.dateTime, { zone: meetingData.event.end.timeZone || 'Europe/Oslo' }).setZone('Europe/Oslo');
+                } else {
+                    eventEnd = DateTime.fromISO(meetingData.event.end.date, { zone: 'Europe/Oslo' });
+                }
+            } else {
+                // Fallback til meetingData.startTime/endTime hvis event ikke finnes
+                eventStart = meetingData.startTime ? DateTime.fromISO(meetingData.startTime, { zone: 'Europe/Oslo' }) : null;
+                eventEnd = meetingData.endTime ? DateTime.fromISO(meetingData.endTime, { zone: 'Europe/Oslo' }) : null;
+            }
+
             const rows = meetingData.participants.map(p => {
                 let firstName = p.firstName;
                 if (firstName.includes('@')) {
-                    firstName = firstName.split('@')[0]; // Extract the portion before '@'
+                    firstName = firstName.split('@')[0];
                 }
-
-                const firma = p.email.split('@')[1]?.split('.')[0] || 'Ukjent'; // Extract domain name from email
-                const isAccepted = p.status === 'accepted'; // Check if status is "Accepted"
-
-                // Adjust start and end times by two hours
-                const adjustedStartTime = new Date(meetingData.startTime);
-                const adjustedEndTime = new Date(meetingData.endTime);
-                adjustedStartTime.setHours(adjustedStartTime.getHours() + 1);
-                adjustedEndTime.setHours(adjustedEndTime.getHours() + 1);
-
-                // NY: Legg til data-status attributt for å kunne filtrere på status
+                const firma = p.email.split('@')[1]?.split('.')[0] || 'Ukjent';
+                const isAccepted = p.status === 'accepted';
                 return `
                     <tr data-status="${p.status}">
                         <td><input type="checkbox" class="accepted-checkbox" ${isAccepted ? 'checked' : ''} /></td>
@@ -799,8 +813,8 @@
                         <td contenteditable="true">${firma}</td>
                         <td contenteditable="true">${p.mobile || ''}</td>
                         <td contenteditable="true"></td>
-                        <td>${adjustedStartTime.toLocaleDateString()} ${adjustedStartTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
-                        <td>${adjustedEndTime.toLocaleDateString()} ${adjustedEndTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+                        <td>${eventStart ? eventStart.toLocaleString(DateTime.DATE_SHORT, { locale: 'no' }) + ' ' + eventStart.toLocaleString(DateTime.TIME_24_SIMPLE, { locale: 'no' }) : ''}</td>
+                        <td>${eventEnd ? eventEnd.toLocaleString(DateTime.DATE_SHORT, { locale: 'no' }) + ' ' + eventEnd.toLocaleString(DateTime.TIME_24_SIMPLE, { locale: 'no' }) : ''}</td>
                         <td contenteditable="true"></td>
                         <td contenteditable="true"></td>
                         <td contenteditable="true">${p.email}</td>
@@ -835,17 +849,23 @@
 
         function displayMeetingDetails(event) {
             const meetingDetails = document.getElementById('meetingDetails');
-            let eventStart = new Date(event.start.dateTime || event.start.date);
-            let eventEnd = new Date(event.end.dateTime || event.end.date);
-
-            // Juster tidene med to timer
-            eventStart.setHours(eventStart.getHours() + 1);
-            eventEnd.setHours(eventEnd.getHours() + 1);
+            const DateTime = luxon.DateTime;
+            let eventStart, eventEnd;
+            if (event.start.dateTime) {
+                eventStart = DateTime.fromISO(event.start.dateTime, { zone: event.start.timeZone || 'Europe/Oslo' }).setZone('Europe/Oslo');
+            } else {
+                eventStart = DateTime.fromISO(event.start.date, { zone: 'Europe/Oslo' });
+            }
+            if (event.end.dateTime) {
+                eventEnd = DateTime.fromISO(event.end.dateTime, { zone: event.end.timeZone || 'Europe/Oslo' }).setZone('Europe/Oslo');
+            } else {
+                eventEnd = DateTime.fromISO(event.end.date, { zone: 'Europe/Oslo' });
+            }
 
             document.getElementById('meetingTitle').textContent = event.subject || 'Ingen tittel';
-            document.getElementById('meetingDate').textContent = eventStart.toLocaleDateString('no-NO');
-            document.getElementById('meetingStartTime').textContent = eventStart.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            document.getElementById('meetingEndTime').textContent = eventEnd.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            document.getElementById('meetingDate').textContent = eventStart.toLocaleString(DateTime.DATE_SHORT, { locale: 'no' });
+            document.getElementById('meetingStartTime').textContent = eventStart.toLocaleString(DateTime.TIME_24_SIMPLE, { locale: 'no' });
+            document.getElementById('meetingEndTime').textContent = eventEnd.toLocaleString(DateTime.TIME_24_SIMPLE, { locale: 'no' });
             document.getElementById('meetingLocation').textContent = event.location?.displayName || 'Ikke spesifisert';
             document.getElementById('meetingOrganizer').textContent = event.organizer.emailAddress.name || 'Ikke spesifisert';
 
